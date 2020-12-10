@@ -53,6 +53,7 @@ dependencies:
   - xz
   - bzip2
   - zlib
+  - pytest
   # when cuda is enabled, install also
   - nvcc_linux-64
   #- arrow-cpp=0.16=*cuda
