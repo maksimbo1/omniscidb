@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include "Embedded/DBEngine.h"
+#include "EmbeddedTest.h"
 #include <boost/program_options.hpp>
 
 #ifndef BASE_PATH
@@ -25,49 +26,6 @@
 using namespace std;
 using namespace EmbeddedDatabase;
 
-std::shared_ptr<DBEngine> engine;
-
-class DBEngineSQLTest : public ::testing::Test {
-protected:
-  DBEngineSQLTest() {}
-  virtual ~DBEngineSQLTest() {}
-
-  void SetUp(const std::string &table_spec) {
-    run_ddl("DROP TABLE IF EXISTS dbe_test;");
-    run_ddl("CREATE TABLE dbe_test " + table_spec + ";");
-  }
-
-  virtual void TearDown() {
-    run_ddl("DROP TABLE IF EXISTS dbe_test;");
-  }
-
-  int select_int(const string& query_str) {
-    auto cursor = ::engine->executeDML(query_str);
-    auto row = cursor->getNextRow();
-    return row.getInt(0);
-  }
-
-  float select_float(const string& query_str) {
-    auto cursor = ::engine->executeDML(query_str);
-    auto row = cursor->getNextRow();
-    return row.getFloat(0);
-  }
-
-  double select_double(const string& query_str) {
-    auto cursor = ::engine->executeDML(query_str);
-    auto row = cursor->getNextRow();
-    return row.getDouble(0);
-  }
-
-  void run_ddl(const string& query_str) {
-    ::engine->executeDDL(query_str);
-  }
-
-  std::shared_ptr<arrow::RecordBatch> run_dml(const string& query_str) {
-    auto cursor = ::engine->executeDML(query_str);
-    return cursor ? cursor->getArrowRecordBatch(): nullptr;
-  }
-};
 
 TEST_F(DBEngineSQLTest, InsertDict) {
   EXPECT_NO_THROW(SetUp(
