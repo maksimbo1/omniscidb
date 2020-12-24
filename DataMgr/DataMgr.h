@@ -30,6 +30,9 @@
 #include "MemoryLevel.h"
 #include "PersistentStorageMgr/PersistentStorageMgr.h"
 
+// ?
+#include "L0Mgr/L0Mgr.h"
+
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -46,6 +49,10 @@ class GlobalFileMgr;
 
 namespace CudaMgr_Namespace {
 class CudaMgr;
+}
+
+namespace L0Mgr_Namespace {
+class L0Mgr;
 }
 
 namespace Data_Namespace {
@@ -209,6 +216,7 @@ class DataMgr {
   size_t getTableEpoch(const int db_id, const int tb_id);
 
   CudaMgr_Namespace::CudaMgr* getCudaMgr() const { return cudaMgr_.get(); }
+  L0Mgr_Namespace::L0Mgr* getL0Mgr() const { return L0Mgr_.get(); }
   File_Namespace::GlobalFileMgr* getGlobalFileMgr() const;
 
   // database_id, table_id, column_id, fragment_id
@@ -244,6 +252,7 @@ class DataMgr {
 
   std::vector<std::vector<AbstractBufferMgr*>> bufferMgrs_;
   std::unique_ptr<CudaMgr_Namespace::CudaMgr> cudaMgr_;
+  std::unique_ptr<L0Mgr_Namespace::L0Mgr> L0Mgr_;
   std::string dataDir_;
   bool hasGpus_;
   size_t reservedGpuMem_;
