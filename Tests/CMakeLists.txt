@@ -7,6 +7,7 @@ add_definitions("-DBASE_PATH=\"${TEST_BASE_PATH}\"")
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Udf/udf_sample.cpp DESTINATION ${CMAKE_BINARY_DIR}/Tests/Udf)
 
 add_executable(CodeGeneratorTest CodeGeneratorTest.cpp)
+add_executable(CodeGeneratorSPIRVTest CodeGeneratorSPIRVTest.cpp)
 add_executable(ExecuteTest ExecuteTest.cpp ClusterTester.cpp)
 add_executable(RunQueryLoop RunQueryLoop.cpp)
 add_executable(StringDictionaryTest StringDictionaryTest.cpp)
@@ -99,6 +100,7 @@ if(ENABLE_CUDA)
   add_executable(GpuSharedMemoryTest GpuSharedMemoryTest.cpp ResultSetTestUtils.cpp)
 elseif(ENABLE_DBE)
   add_executable(EmbeddedDatabaseTest EmbeddedDatabaseTest.cpp)
+  add_executable(EmbeddedSimpleTest EmbeddedSimpleTest.cpp)
 endif()
 if("${MAPD_EDITION_LOWER}" STREQUAL "ee")
   add_executable(UserMappingDdlTest ee/UserMappingDdlTest.cpp)
@@ -129,6 +131,7 @@ target_link_libraries(StringFunctionsTest ${EXECUTE_TEST_LIBS})
 target_link_libraries(TokenCompletionHintsTest token_completion_hints gtest mapd_thrift Logger Shared ${Boost_LIBRARIES})
 target_link_libraries(DumpRestoreTest ${EXECUTE_TEST_LIBS})
 target_link_libraries(CodeGeneratorTest ${EXECUTE_TEST_LIBS})
+target_link_libraries(CodeGeneratorSPIRVTest ${EXECUTE_TEST_LIBS})
 target_link_libraries(ExecuteTest ${EXECUTE_TEST_LIBS})
 target_link_libraries(RunQueryLoop ${EXECUTE_TEST_LIBS} bcrypt)
 target_link_libraries(ImportExportTest gtest ${EXECUTE_TEST_LIBS})
@@ -196,6 +199,7 @@ if(ENABLE_CUDA)
   target_link_libraries(GpuSharedMemoryTest ${EXECUTE_TEST_LIBS})
 elseif(ENABLE_DBE)
   target_link_libraries(EmbeddedDatabaseTest gtest DBEngine)
+  target_link_libraries(EmbeddedSimpleTest gtest DBEngine)
 endif()
 
 if("${MAPD_EDITION_LOWER}" STREQUAL "ee")
@@ -213,6 +217,7 @@ add_test(UtilTest UtilTest ${TEST_ARGS})
 add_test(ExecuteTest ExecuteTest ${TEST_ARGS})
 add_test(NAME ExecuteTestTemporaryTables COMMAND ExecuteTest ${TEST_ARGS} "--use-temporary-tables")
 add_test(CodeGeneratorTest CodeGeneratorTest ${TEST_ARGS})
+add_test(CodeGeneratorSPIRVTest CodeGeneratorSPIRVTest ${TEST_ARGS})
 add_test(ResultSetTest ResultSetTest ${TEST_ARGS})
 add_test(ColumnarResultsTest ColumnarResultsTest ${TEST_ARGS})
 add_test(FromTableReorderingTest FromTableReorderingTest ${TEST_ARGS})
@@ -268,6 +273,7 @@ if(ENABLE_CUDA)
   add_test(GpuSharedMemoryTest GpuSharedMemoryTest ${TEST_ARGS})
 elseif(ENABLE_DBE)
   add_test(EmbeddedDatabaseTest EmbeddedDatabaseTest ${TEST_ARGS})
+  add_test(EmbeddedSimpleTest EmbeddedSimpleTest ${TEST_ARGS})
 endif()
 
 if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
@@ -299,6 +305,7 @@ set(TEST_PROGRAMS
   DumpRestoreTest
   ExecuteTest
   CodeGeneratorTest
+  CodeGeneratorSPIRVTest
   ResultSetTest
   ColumnarResultsTest
   FromTableReorderingTest
@@ -354,6 +361,7 @@ if(ENABLE_CUDA)
   list(APPEND TEST_PROGRAMS GpuSharedMemoryTest)
 elseif(ENABLE_DBE)
   list(APPEND TEST_PROGRAMS EmbeddedDatabaseTest)
+  list(APPEND TEST_PROGRAMS EmbeddedSimpleTest)
 endif()
 
 if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
@@ -404,7 +412,7 @@ add_custom_target(topk_tests
     DEPENDS TopKTest)
 
 if(ENABLE_DBE)
-  set(DBE_TEST_PROGRAMS EmbeddedDatabaseTest)
+  set(DBE_TEST_PROGRAMS EmbeddedDatabaseTest EmbeddedSimpleTest)
   set_tests_properties(${DBE_TEST_PROGRAMS} PROPERTIES LABELS "embedded")
   add_custom_target(dbe_all_tests
     COMMAND mkdir -p ${TEST_BASE_PATH}

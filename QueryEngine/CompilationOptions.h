@@ -19,7 +19,7 @@
 
 #include <vector>
 
-enum class ExecutorDeviceType { CPU, GPU };
+enum class ExecutorDeviceType { CPU, GPU, XPU };
 
 enum class ExecutorOptLevel { Default, LoopStrengthReduction, ReductionJIT };
 
@@ -59,6 +59,17 @@ struct CompilationOptions {
                               true,
                               ExecutorExplainType::Default,
                               false};
+  }
+
+  static CompilationOptions makeHybrid(const CompilationOptions& in) {
+    return CompilationOptions{ExecutorDeviceType::XPU,
+                              in.hoist_literals,
+                              in.opt_level,
+                              in.with_dynamic_watchdog,
+                              in.allow_lazy_fetch,
+                              in.filter_on_deleted_column,
+                              in.explain_type,
+                              in.register_intel_jit_listener};
   }
 };
 

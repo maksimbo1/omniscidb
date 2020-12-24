@@ -17,7 +17,6 @@
 
 #include <gtest/gtest.h>
 #include "Embedded/DBEngine.h"
-#include <boost/program_options.hpp>
 
 #ifndef BASE_PATH
 #define BASE_PATH "./tmp"

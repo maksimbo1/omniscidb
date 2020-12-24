@@ -69,6 +69,10 @@ class QueryCompilationDescriptor {
         return std::string{"IR for the GPU:\n===============\n" +
                            compilation_result_.llvm_ir};
       }
+      case ExecutorDeviceType::XPU: {
+        return std::string{"IR for the XPU:\n===============\n" +
+                           compilation_result_.llvm_ir};
+      }
     }
     UNREACHABLE();
     return "";

@@ -204,6 +204,18 @@ void init_logger_stderr_only() {
   logger::init(log_options);
 }
 
+template <typename T, size_t N>
+struct AlignedArray {
+  T data[N];
+  const T& operator[](size_t index) {
+    if (index < 0 || index >= N)
+      throw std::out_of_range("Aligned array out of range access.");
+    return data[index];
+    }
+  std::vector<int> a;
+  
+};
+
 }  // namespace TestHelpers
 
 #endif  // TEST_HELPERS_H_

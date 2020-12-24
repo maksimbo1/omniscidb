@@ -17,6 +17,8 @@
 #include "CodeGenerator.h"
 #include "ScalarExprVisitor.h"
 
+#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
+
 namespace {
 
 class UsedColumnExpressions : public ScalarExprVisitor<ScalarCodeGenerator::ColumnMap> {
@@ -152,6 +154,9 @@ std::vector<void*> ScalarCodeGenerator::generateNativeCode(
       return generateNativeGPUCode(
           compiled_expression.func, compiled_expression.wrapper_func, co);
     }
+    // case ExecutorDeviceType::XPU: {
+    //   return generateSPV(compiled_expression.func, ???)
+    // }
     default: {
       LOG(FATAL) << "Invalid device type";
       return {};  // satisfy -Wreturn-type
@@ -191,4 +196,36 @@ std::vector<void*> ScalarCodeGenerator::generateNativeGPUCode(
   gpu_compilation_context_ = CodeGenerator::generateNativeGPUCode(
       func, wrapper_func, {func, wrapper_func}, co, gpu_target);
   return gpu_compilation_context_->getNativeFunctionPointers();
+}
+
+std::vector<void*> ScalarCodeGenerator::generateSPV() {
+  // FIXME: bypass compile for now, decide on module.
+  auto& ctx = module_->getContext();
+  module_->setTargetTriple("spir64-unknown-unknown");
+  // todo: wrap a wrapper?
+  // void (int*)
+  std::vector<llvm::Type*> args{llvm::Type::getInt32PtrTy(ctx)};
+  llvm::FunctionType* func_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), args, false);
+
+  llvm::Function* func = llvm::Function::Create(
+      func_type, llvm::GlobalValue::LinkageTypes::ExternalLinkage, "func_name", module_.get());
+  func->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+
+  llvm::BasicBlock* entry = llvm::BasicBlock::Create(ctx, ".entry", func);
+
+  llvm::IRBuilder<> b(ctx);
+  b.SetInsertPoint(entry);
+
+  llvm::Constant* one = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), llvm::APInt(32, 1, true));
+  llvm::Value* firstElem = b.CreateLoad(func->args().begin(), "ld");
+  llvm::Value* result = b.CreateAdd(firstElem, one, "foo");
+  b.CreateStore(result, func->args().begin());
+  b.CreateRetVoid();
+
+  module_->print(llvm::errs(), nullptr);
+
+  
+
+  return {};
 }

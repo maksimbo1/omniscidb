@@ -92,6 +92,11 @@ class CodeGenerator {
     bool row_func_not_inlined;
   };
 
+  struct XPUTarget {
+    const L0Mgr_Namespace::L0Mgr* L0_mgr;
+    CgenState* cgen_state;
+  };
+
   static std::shared_ptr<GpuCompilationContext> generateNativeGPUCode(
       llvm::Function* func,
       llvm::Function* wrapper_func,
@@ -583,7 +588,10 @@ class ScalarCodeGenerator : public CodeGenerator {
   std::vector<void*> generateNativeCode(const CompiledExpression& compiled_expression,
                                         const CompilationOptions& co);
 
+  std::vector<void*> generateSPV();
+
   CudaMgr_Namespace::CudaMgr* getCudaMgr() const { return cuda_mgr_.get(); }
+  L0Mgr_Namespace::L0Mgr* getL0Mgr() const { return L0_mgr_.get(); }
 
   using ColumnMap =
       std::unordered_map<InputColDescriptor, std::shared_ptr<Analyzer::ColumnVar>>;
@@ -606,6 +614,7 @@ class ScalarCodeGenerator : public CodeGenerator {
   std::unique_ptr<CgenState> own_cgen_state_;
   std::unique_ptr<PlanState> own_plan_state_;
   std::unique_ptr<CudaMgr_Namespace::CudaMgr> cuda_mgr_;
+  std::unique_ptr<L0Mgr_Namespace::L0Mgr> L0_mgr_;
   std::shared_ptr<GpuCompilationContext> gpu_compilation_context_;
   std::unique_ptr<llvm::TargetMachine> nvptx_target_machine_;
 };
