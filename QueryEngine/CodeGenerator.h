@@ -21,6 +21,8 @@
 #include "../Analyzer/Analyzer.h"
 #include "Execute.h"
 
+#include "QueryEngine/XpuKernel.h"
+
 // Code generation utility to be used for queries and scalar expressions.
 class CodeGenerator {
  public:
@@ -588,7 +590,7 @@ class ScalarCodeGenerator : public CodeGenerator {
   std::vector<void*> generateNativeCode(const CompiledExpression& compiled_expression,
                                         const CompilationOptions& co);
 
-  std::vector<void*> generateSPV();
+  std::vector<int8_t> generateSPV(/*const CompilationOptions& co*/);
 
   CudaMgr_Namespace::CudaMgr* getCudaMgr() const { return cuda_mgr_.get(); }
   L0Mgr_Namespace::L0Mgr* getL0Mgr() const { return L0_mgr_.get(); }
@@ -615,6 +617,7 @@ class ScalarCodeGenerator : public CodeGenerator {
   std::unique_ptr<PlanState> own_plan_state_;
   std::unique_ptr<CudaMgr_Namespace::CudaMgr> cuda_mgr_;
   std::unique_ptr<L0Mgr_Namespace::L0Mgr> L0_mgr_;
+  std::shared_ptr<XpuCompilationContext> xpu_compilation_context_;
   std::shared_ptr<GpuCompilationContext> gpu_compilation_context_;
   std::unique_ptr<llvm::TargetMachine> nvptx_target_machine_;
 };

@@ -132,7 +132,7 @@ void L0Mgr::createModule(unsigned char* code, size_t size_bytes) {
 void L0Mgr::initModule(unsigned char* code, size_t size_bytes) {
   moduleDesc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   moduleDesc.pNext = nullptr;
-  moduleDesc.pBuildFlags = ""; // ?
+  moduleDesc.pBuildFlags = ""; // defaults to scalar path; will probably need to be able to switch to vc
   moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
   moduleDesc.inputSize = size_bytes;
   moduleDesc.pConstants = nullptr;

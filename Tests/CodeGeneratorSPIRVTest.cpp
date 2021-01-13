@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 OmniSci, Inc.
+ * Copyright 2021 OmniSci, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,10 @@
 
 TEST(CodeGeneratorSPVTest, IntegerConstantCopy) {
   auto& ctx = getGlobalLLVMContext();
-  std::unique_ptr<llvm::Module> module(read_template_module(ctx));
+  // FIXME: requires llvm.ctlz.i64 intrinsic supported for llvm9
+  // see https://github.com/KhronosGroup/SPIRV-LLVM-Translator/pull/872
+  // std::unique_ptr<llvm::Module> module(read_template_module(ctx));
+  std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("TestSPVModule", ctx);
   ScalarCodeGenerator code_generator(std::move(module));
   CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::XPU);
   co.hoist_literals = false;
@@ -42,12 +45,9 @@ TEST(CodeGeneratorSPVTest, IntegerConstantCopy) {
   auto constant = makeExpr<Analyzer::Constant>(kINT, false, d);
   const auto compiled_expr = code_generator.compile(constant.get(), true, co);
 
-  using FuncPtr = int (*)(int*);
-  auto func_ptrs = code_generator.generateSPV();
-  ASSERT_EQ(func_ptrs.size(), 1);
+  auto binary = code_generator.generateSPV();
 
-  for (size_t id = 0; id < func_ptrs.size(); ++id) {
-    auto entry_ptr = func_ptrs[id];
+  // for (size_t id = 0; id < func_ptrs.size(); ++id) {
     TestHelpers::AlignedArray<int, 32> arr;
     TestHelpers::AlignedArray<int, 32> out;
 
@@ -55,13 +55,13 @@ TEST(CodeGeneratorSPVTest, IntegerConstantCopy) {
 
     auto in = code_generator.getL0Mgr()->allocateDeviceMem(32, 0/*unused*/);
     code_generator.getL0Mgr()->copyHostToDevice((int8_t*)in, (int8_t*)arr.data, 32, 0/*unused*/);
-    code_generator.getL0Mgr()->createModule((unsigned char*)entry_ptr, 0/*FIXME*/);
+    code_generator.getL0Mgr()->createModule((unsigned char*)binary.data(), 0/*FIXME*/);
     code_generator.getL0Mgr()->launch();
     code_generator.getL0Mgr()->copyDeviceToHost((int8_t*)out.data, (int8_t*)in, 32, 0/*unused*/);
     code_generator.getL0Mgr()->commit();
 
     ASSERT_EQ(out[0], d.intval);
-  }
+  // }
 }
 
 int main(int argc, char** argv) {

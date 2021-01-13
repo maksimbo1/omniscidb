@@ -54,6 +54,7 @@ class L0Mgr {
   L0Mgr();
   ~L0Mgr();
 
+  // TODO: rethink, does memory view suit us?
   void copyHostToDevice(int8_t* device_ptr,
                         const int8_t* host_ptr,
                         const size_t num_bytes,
@@ -72,34 +73,66 @@ class L0Mgr {
 
 
 // in-mem spv, should return module ref? ignore for now
+// should be created at construction and kernels added in runtime (?)
   void createModule(unsigned char* code, size_t size_bytes);
+  // return a future with event list?
   void launch(); // FIXME: rename
   void commit(); // for now run only on commit
 
  private:
   void initModule(unsigned char* code, size_t size_bytes);
   void initKernel(std::string name = "SomeKernelName");
- // TODO: multiple devices
- // omnisci::DeviceGroup ?
+
+  // All these should be wrapped up
+  // TODO: multiple devices
+  // omnisci::DeviceGroup ?
   ze_device_handle_t hDevice = nullptr;
   ze_module_handle_t hModule = nullptr;
   ze_driver_handle_t hDriver = nullptr;
   ze_command_queue_handle_t hCommandQueue = nullptr;
   ze_context_handle_t hContext = nullptr;
 
+  // Likely should exist per host thread
   ze_command_list_handle_t hCommandList;
   ze_kernel_handle_t hKernel;
   ze_module_desc_t moduleDesc;
   ze_kernel_desc_t kernelDesc;
 };
 
+// Allow user to create kernels (or other abstraction)
 class Kernel {};
+
 // TODO
 namespace detail {
-class Device {};
-class Event {};
+class Device {
+  Device();
+  ~Device();
+};
+
+class Event {
+public:
+  Event();
+  virtual ~Event(); // either virtual or with params to create, as follows:
+  struct EventOptions {
+    ze_event_desc_t eventDesc = {};
+  };
+ private:
+  ze_event_handle_t e{nullptr};
+};
+
+class EventPool {
+ public:
+  EventPool(/*will need context & device*/);
+  ~EventPool();
+  Event* create(Event::EventOptions& opts);
+
+ private:
+  ze_event_pool_handle_t p{nullptr};
+}; 
+
 class Context {};
 class CommandQueue {};
+class Module {};
 }  // namespace detail
 
 }  // namespace L0Mgr_Namespace

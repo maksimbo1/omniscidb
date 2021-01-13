@@ -245,6 +245,9 @@ set(QUERY_ENGINE_LIBS
 list(APPEND QUERY_ENGINE_LIBS ${clang_libs})
 list(APPEND QUERY_ENGINE_LIBS ${llvm_libs} ${ZLIB_LIBRARIES})
 
+# TODO: move to xpu_libs
+list(APPEND QUERY_ENGINE_LIBS LLVMSPIRVLib)
+
 target_link_libraries(QueryEngine ${QUERY_ENGINE_LIBS})
 
 add_custom_command(

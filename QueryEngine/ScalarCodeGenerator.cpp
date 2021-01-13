@@ -18,6 +18,9 @@
 #include "ScalarExprVisitor.h"
 
 #include "LLVMSPIRVLib/LLVMSPIRVLib.h"
+#include <sstream>
+#include <string>
+#include <cassert>
 
 namespace {
 
@@ -154,6 +157,7 @@ std::vector<void*> ScalarCodeGenerator::generateNativeCode(
       return generateNativeGPUCode(
           compiled_expression.func, compiled_expression.wrapper_func, co);
     }
+    // TODO
     // case ExecutorDeviceType::XPU: {
     //   return generateSPV(compiled_expression.func, ???)
     // }
@@ -198,9 +202,11 @@ std::vector<void*> ScalarCodeGenerator::generateNativeGPUCode(
   return gpu_compilation_context_->getNativeFunctionPointers();
 }
 
-std::vector<void*> ScalarCodeGenerator::generateSPV() {
+std::vector<int8_t> ScalarCodeGenerator::generateSPV() {
   // FIXME: bypass compile for now, decide on module.
   auto& ctx = module_->getContext();
+  // should be TestSPVModule
+  llvm::errs() << module_->getName() << "\n";
   module_->setTargetTriple("spir64-unknown-unknown");
   // todo: wrap a wrapper?
   // void (int*)
@@ -223,9 +229,26 @@ std::vector<void*> ScalarCodeGenerator::generateSPV() {
   b.CreateStore(result, func->args().begin());
   b.CreateRetVoid();
 
-  module_->print(llvm::errs(), nullptr);
+  // module_->print(llvm::errs(), nullptr);
 
-  
+  std::ostringstream ss;
+  std::string err;
+  // llvm::raw_os_ostream os(ss);
 
-  return {};
+  auto success = llvm::writeSpirv(module_.get(), ss, err);
+  if (!success) {
+    llvm::errs() << "Spirv translation failed with error: " << err << "\n";
+  } else {
+    llvm::errs() << "Spirv tranlsation success.\n";
+  }
+
+  llvm::errs() << "Code size: " << ss.str().size() << "\n";
+  const std::string binary(ss.str());
+  assert(SPIRV::isSpirvBinary(binary));
+  xpu_compilation_context_ = std::make_shared<XpuCompilationContext>(binary.data(), binary.size());
+  std::vector<int8_t> res;
+  res.resize(binary.size());
+  memcpy(&res[0], binary.data(), binary.size());
+
+  return res;
 }
