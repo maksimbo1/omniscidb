@@ -71,6 +71,9 @@ DataMgr::DataMgr(const string& dataDir,
     hasGpus_ = false;
   }
 
+  // if (XPUEnabled)
+  L0Mgr_ = std::make_unique<L0Mgr_Namespace::L0Mgr>();
+
   populateMgrs(system_parameters, numReaderThreads, fsi, cache_config);
   createTopLevelMetadata();
 }

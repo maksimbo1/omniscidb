@@ -203,6 +203,9 @@ std::vector<void*> ScalarCodeGenerator::generateNativeGPUCode(
 }
 
 std::vector<int8_t> ScalarCodeGenerator::generateSPV() {
+  if (!L0_mgr_) {
+    L0_mgr_ = std::make_unique<L0Mgr_Namespace::L0Mgr>();
+  }
   // FIXME: bypass compile for now, decide on module.
   auto& ctx = module_->getContext();
   // should be TestSPVModule
