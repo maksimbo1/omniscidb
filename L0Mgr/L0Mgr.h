@@ -42,7 +42,7 @@ std::string errorMessage(L0result const);
 #define L0_SAFE_CALL(call)                                                           \
   {                                                                                  \
     auto status = (call);                                                            \
-    if (!status) {                                                                   \
+    if (status) {                                                                    \
       std::cerr << "L0 error: " << (int)status << " " << __FILE__ << ":" << __LINE__ \
                 << std::endl;                                                        \
       exit(status);                                                                  \
