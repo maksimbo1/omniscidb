@@ -248,6 +248,10 @@ list(APPEND QUERY_ENGINE_LIBS ${llvm_libs} ${ZLIB_LIBRARIES})
 # TODO: move to xpu_libs
 list(APPEND QUERY_ENGINE_LIBS LLVMSPIRVLib)
 
+# TODO: if cleanup enabled
+add_subdirectory(Helpers)
+#list(APPEND QUERY_ENGINE_LIBS CleanupPass)
+
 target_link_libraries(QueryEngine ${QUERY_ENGINE_LIBS})
 
 add_custom_command(
