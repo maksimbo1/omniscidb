@@ -10,3 +10,8 @@ struct LegacyCleanupPass: public llvm::BasicBlockPass
   bool runOnBasicBlock(llvm::BasicBlock &BB) override;
 };
 
+namespace llvm {
+  BasicBlockPass* createLegacyCleanupPass() {
+    return new LegacyCleanupPass();
+  }
+}

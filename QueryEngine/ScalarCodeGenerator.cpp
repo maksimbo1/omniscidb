@@ -18,6 +18,8 @@
 #include "ScalarExprVisitor.h"
 
 #include "LLVMSPIRVLib/LLVMSPIRVLib.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "QueryEngine/Helpers/CleanupPass.h"
 #include <sstream>
 #include <string>
 #include <cassert>
@@ -202,6 +204,11 @@ std::vector<void*> ScalarCodeGenerator::generateNativeGPUCode(
   return gpu_compilation_context_->getNativeFunctionPointers();
 }
 
+static void addCleanupPasses(llvm::legacy::PassManagerBase& PM) {
+  PM.add(llvm::createLegacyCleanupPass());
+}
+
+
 std::vector<int8_t> ScalarCodeGenerator::generateSPV() {
   if (!L0_mgr_) {
     L0_mgr_ = std::make_unique<L0Mgr_Namespace::L0Mgr>();
@@ -237,6 +244,11 @@ std::vector<int8_t> ScalarCodeGenerator::generateSPV() {
   std::ostringstream ss;
   std::string err;
   // llvm::raw_os_ostream os(ss);
+
+  // Replace unsupported intrinsics with nops
+  llvm::legacy::PassManager PM;
+  addCleanupPasses(PM);
+  PM.run(*(module_.get()));
 
   auto success = llvm::writeSpirv(module_.get(), ss, err);
   if (!success) {

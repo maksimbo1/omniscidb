@@ -27,6 +27,7 @@
 #include "QueryEngine/Execute.h"
 #include "QueryEngine/IRCodegenUtils.h"
 #include "QueryEngine/LLVMGlobalContext.h"
+#include "QueryEngine/Helpers/CleanupPass.h"
 #include "TestHelpers.h"
 
 
@@ -34,8 +35,8 @@ TEST(CodeGeneratorSPVTest, IntegerConstantCopy) {
   auto& ctx = getGlobalLLVMContext();
   // FIXME: requires llvm.ctlz.i64 intrinsic supported for llvm9
   // see https://github.com/KhronosGroup/SPIRV-LLVM-Translator/pull/872
-  // std::unique_ptr<llvm::Module> module(read_template_module(ctx));
-  std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("TestSPVModule", ctx);
+  std::unique_ptr<llvm::Module> module(read_template_module(ctx));
+  // std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("TestSPVModule", ctx);
   ScalarCodeGenerator code_generator(std::move(module));
   CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::XPU);
   co.hoist_literals = false;
