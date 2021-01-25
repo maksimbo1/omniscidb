@@ -3,15 +3,13 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
-struct LegacyCleanupPass: public llvm::BasicBlockPass
+struct LegacyCleanupIntrinsicsPass: public llvm::BasicBlockPass
 {
   static char ID;
-  LegacyCleanupPass() : BasicBlockPass(ID) {}
+  LegacyCleanupIntrinsicsPass() : BasicBlockPass(ID) {}
   bool runOnBasicBlock(llvm::BasicBlock &BB) override;
 };
 
 namespace llvm {
-  BasicBlockPass* createLegacyCleanupPass() {
-    return new LegacyCleanupPass();
-  }
+  BasicBlockPass* createLegacyCleanupIntrinsicsPass();
 }

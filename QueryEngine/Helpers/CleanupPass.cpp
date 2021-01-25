@@ -9,10 +9,13 @@
 using namespace llvm;
 
 static bool isUnsupported(llvm::StringRef name) {
-  return name == "llvm.ctlz";
+  // return name == "llvm.ctlz";
+  return false;
 }
 
-bool LegacyCleanupPass::runOnBasicBlock(llvm::BasicBlock& BB) {
+char LegacyCleanupIntrinsicsPass::ID = 0;
+
+bool LegacyCleanupIntrinsicsPass::runOnBasicBlock(llvm::BasicBlock& BB) {
   bool changed = false;
   for (auto Inst = BB.begin(); Inst != BB.end(); ++Inst) {
     auto* intrin = dyn_cast<IntrinsicInst>(Inst);
@@ -28,4 +31,10 @@ bool LegacyCleanupPass::runOnBasicBlock(llvm::BasicBlock& BB) {
   }
 
   return changed;
+}
+
+namespace llvm {
+  llvm::BasicBlockPass* createLegacyCleanupIntrinsicsPass() {
+    return new LegacyCleanupIntrinsicsPass();
+  }
 }

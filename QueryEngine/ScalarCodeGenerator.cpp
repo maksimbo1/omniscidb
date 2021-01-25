@@ -205,13 +205,13 @@ std::vector<void*> ScalarCodeGenerator::generateNativeGPUCode(
 }
 
 static void addCleanupPasses(llvm::legacy::PassManagerBase& PM) {
-  PM.add(llvm::createLegacyCleanupPass());
+  PM.add(llvm::createLegacyCleanupIntrinsicsPass());
 }
 
 
 std::vector<int8_t> ScalarCodeGenerator::generateSPV() {
   if (!L0_mgr_) {
-    L0_mgr_ = std::make_unique<L0Mgr_Namespace::L0Mgr>();
+    // L0_mgr_ = std::make_unique<L0Mgr_Namespace::L0Mgr>();
   }
   // FIXME: bypass compile for now, decide on module.
   auto& ctx = module_->getContext();
