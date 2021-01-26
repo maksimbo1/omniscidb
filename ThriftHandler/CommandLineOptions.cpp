@@ -680,6 +680,11 @@ void CommandLineOptions::fillAdvancedOptions() {
                                    ->default_value(g_enable_auto_metadata_update)
                                    ->implicit_value(true),
                                "Enable automatic metadata update.");
+  developer_desc.add_options()("enable-lazy-fetch",
+                               po::value<bool>(&g_enable_lazy_fetch)
+                                   ->default_value(g_enable_lazy_fetch)
+                                   ->implicit_value(true),
+                               "Enable lazy fetch columns in ResultSets");
 }
 
 namespace {
