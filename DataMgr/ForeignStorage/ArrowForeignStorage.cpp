@@ -780,23 +780,23 @@ static SQLTypeInfo getOmnisciType(const arrow::DataType& type) {
       // uncomment when arrow 2.0 will be released and modin support for dictionary types
       // in read_csv would be implemented
 
-      // case Type::DICTIONARY: {
-      //   auto type = SQLTypeInfo(kTEXT, false, kENCODING_DICT);
-      //   // this is needed because createTable forces type.size to be equal to
-      //   // comp_param / 8, no matter what type.size you set here
-      //   type.set_comp_param(sizeof(uint32_t) * 8);
-      //   return type;
-      // }
-      // case Type::STRING:
-      //   return SQLTypeInfo(kTEXT, false, kENCODING_NONE);
-
-    case Type::STRING: {
+    case Type::DICTIONARY: {
       auto type = SQLTypeInfo(kTEXT, false, kENCODING_DICT);
       // this is needed because createTable forces type.size to be equal to
       // comp_param / 8, no matter what type.size you set here
       type.set_comp_param(sizeof(uint32_t) * 8);
       return type;
     }
+    case Type::STRING:
+      return SQLTypeInfo(kTEXT, false, kENCODING_NONE);
+
+    // case Type::STRING: {
+    //   auto type = SQLTypeInfo(kTEXT, false, kENCODING_DICT);
+    //   // this is needed because createTable forces type.size to be equal to
+    //   // comp_param / 8, no matter what type.size you set here
+    //   type.set_comp_param(sizeof(uint32_t) * 8);
+    //   return type;
+    // }
     case Type::DECIMAL: {
       const auto& decimal_type = static_cast<const arrow::DecimalType&>(type);
       return SQLTypeInfo(kDECIMAL, decimal_type.precision(), decimal_type.scale(), false);
