@@ -73,11 +73,6 @@ class ArrowForeignStorageBase : public PersistentForeignStorageInterface {
       const ColumnDescriptor& c,
       std::shared_ptr<arrow::ChunkedArray> arr_col_chunked_array);
 
-  std::shared_ptr<arrow::ChunkedArray> convertArrowDictionary(
-      StringDictionary* dict,
-      const ColumnDescriptor& c,
-      std::shared_ptr<arrow::ChunkedArray> arr_col_chunked_array);
-
   template <typename T, typename ChunkType>
   std::shared_ptr<arrow::ChunkedArray> createDecimalColumn(
       const ColumnDescriptor& c,
@@ -110,6 +105,12 @@ class ArrowForeignStorageBase : public PersistentForeignStorageInterface {
 
   std::map<std::array<int, 3>, std::vector<ArrowFragment>> m_columns;
 };
+
+template <typename IndicesArray>
+std::shared_ptr<arrow::ChunkedArray> convertArrowDictionary(
+    StringDictionary* dict,
+    const ColumnDescriptor& c,
+    std::shared_ptr<arrow::ChunkedArray> arr_col_chunked_array);
 
 void ArrowForeignStorageBase::generateNullValues(
     const std::vector<Frag>& fragments,
@@ -369,10 +370,47 @@ void ArrowForeignStorageBase::parseArrowTable(Catalog_Namespace::Catalog* catalo
                 arr_col_chunked_array =
                     createDictionaryEncodedColumn(dict, c, arr_col_chunked_array);
                 break;
-              case arrow::Type::DICTIONARY:
-                arr_col_chunked_array =
-                    convertArrowDictionary(dict, c, arr_col_chunked_array);
+              case arrow::Type::DICTIONARY: {
+                auto dict_type = std::static_pointer_cast<arrow::DictionaryType>(
+                    arr_col_chunked_array->type());
+                switch (dict_type->index_type()->id()) {
+                  case arrow::Type::INT8:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::Int8Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::INT16:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::Int16Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::INT32:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::Int32Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::INT64:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::Int64Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::UINT8:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::UInt8Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::UINT16:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::UInt16Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::UINT32:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::UInt32Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  case arrow::Type::UINT64:
+                    arr_col_chunked_array = convertArrowDictionary<arrow::UInt64Array>(
+                        dict, c, arr_col_chunked_array);
+                    break;
+                  default:
+                    CHECK(false);
+                }
                 break;
+              }
               default:
                 CHECK(false);
             }
@@ -507,16 +545,17 @@ void ArrowForeignStorageBase::read(const ChunkKey& chunk_key,
         sz = (size + 1) * sizeof(uint32_t);
         if (sz > 0) {
           if (i != 0) {
-            // We merge arrow chunks with string offsets into a single contigous fragment.
-            // Each string is represented by a pair of offsets, thus size of offset table
-            // is num strings + 1. When merging two chunks, the last number in the first
-            // chunk duplicates the first number in the second chunk, so we skip it.
+            // We merge arrow chunks with string offsets into a single contigous
+            // fragment. Each string is represented by a pair of offsets, thus size of
+            // offset table is num strings + 1. When merging two chunks, the last number
+            // in the first chunk duplicates the first number in the second chunk, so we
+            // skip it.
             data++;
             sz -= sizeof(uint32_t);
           } else {
-            // As we support cases when fragment starts with offset of arrow chunk we need
-            // to substract the first element of the first chunk from all elements in that
-            // fragment
+            // As we support cases when fragment starts with offset of arrow chunk we
+            // need to substract the first element of the first chunk from all elements
+            // in that fragment
             varlen_offset -= data[0];
           }
           // We also re-calculate offsets in the second chunk as it is a continuation of
@@ -587,7 +626,8 @@ int8_t* ArrowForeignStorageBase::tryZeroCopy(const ChunkKey& chunk_key,
     bp = array_data->buffers[1].get();
   }
 
-  // arrow buffer is empty, it means we should fill fragment with null's in read function
+  // arrow buffer is empty, it means we should fill fragment with null's in read
+  // function
   if (!bp) {
     return nullptr;
   }
@@ -596,7 +636,8 @@ int8_t* ArrowForeignStorageBase::tryZeroCopy(const ChunkKey& chunk_key,
 
   // if buffer is null encoded string index buffer
   if (chunk_key.size() == 5 && chunk_key[4] == 2) {
-    // if offset != 0 we need to recalculate index buffer by adding  offset to each index
+    // if offset != 0 we need to recalculate index buffer by adding  offset to each
+    // index
     if (offset != 0) {
       return nullptr;
     } else {
@@ -654,7 +695,8 @@ ArrowForeignStorageBase::createDictionaryEncodedColumn(
   return std::make_shared<arrow::ChunkedArray>(array);
 }
 
-std::shared_ptr<arrow::ChunkedArray> ArrowForeignStorageBase::convertArrowDictionary(
+template <typename IndicesArrayType>
+std::shared_ptr<arrow::ChunkedArray> convertArrowDictionary(
     StringDictionary* dict,
     const ColumnDescriptor& c,
     std::shared_ptr<arrow::ChunkedArray> arr_col_chunked_array) {
@@ -670,7 +712,7 @@ std::shared_ptr<arrow::ChunkedArray> ArrowForeignStorageBase::convertArrowDictio
       strings[i] = std::string_view(view.data(), view.length());
     }
     auto arrow_indices =
-        std::static_pointer_cast<arrow::Int32Array>(dict_array->indices());
+        std::static_pointer_cast<IndicesArrayType>(dict_array->indices());
     std::vector<int> indices_mapping(values->length());
     dict->getOrAddBulk(strings, indices_mapping.data());
 
@@ -777,8 +819,8 @@ static SQLTypeInfo getOmnisciType(const arrow::DataType& type) {
       return SQLTypeInfo(kFLOAT, false);
     case Type::DOUBLE:
       return SQLTypeInfo(kDOUBLE, false);
-      // uncomment when arrow 2.0 will be released and modin support for dictionary types
-      // in read_csv would be implemented
+      // uncomment when arrow 2.0 will be released and modin support for dictionary
+      // types in read_csv would be implemented
 
     case Type::DICTIONARY: {
       auto type = SQLTypeInfo(kTEXT, false, kENCODING_DICT);
