@@ -724,7 +724,11 @@ std::shared_ptr<arrow::ChunkedArray> convertArrowDictionary(
     auto raw_data = reinterpret_cast<int32_t*>(dict_indices_buf->mutable_data());
 
     for (int i = 0; i < arrow_indices->length(); i++) {
-      raw_data[i] = indices_mapping[arrow_indices->Value(i)];
+      if (dict_array->IsNull(i)) {
+        raw_data[i] = inline_int_null_value<int32_t>();
+      } else {
+        raw_data[i] = indices_mapping[arrow_indices->Value(i)];
+      }
     }
 
     converted_chunks.push_back(
