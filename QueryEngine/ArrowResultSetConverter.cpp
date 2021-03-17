@@ -157,6 +157,46 @@ void create_or_append_validity(const ScalarTargetValue& value,
   null_bitmap->push_back(is_valid);
 }
 
+void create_or_append_str_value(const ScalarTargetValue& val_cty,
+                                std::shared_ptr<ValueArray>& values,
+                                const size_t max_size) {
+  auto pval_cty = boost::get<NullableString>(&val_cty);
+  CHECK(pval_cty);
+  auto pstr = boost::get<std::string>(pval_cty);
+  if (!values) {
+    values = std::make_shared<ValueArray>(std::vector<std::string>());
+    boost::get<std::vector<std::string>>(*values).reserve(max_size);
+  }
+  CHECK(values);
+  auto values_ty = boost::get<std::vector<std::string>>(values.get());
+  CHECK(values_ty);
+  if (pstr) {
+    values_ty->push_back(*pstr);
+  } else {
+    values_ty->push_back("");
+  }
+}
+
+void create_or_append_str_validity(const ScalarTargetValue& value,
+                                   const SQLTypeInfo& col_type,
+                                   std::shared_ptr<std::vector<bool>>& null_bitmap,
+                                   const size_t max_size) {
+  if (col_type.get_notnull()) {
+    CHECK(!null_bitmap);
+    return;
+  }
+  auto pvalue = boost::get<NullableString>(&value);
+  CHECK(pvalue);
+  bool is_valid = boost::get<std::string>(pvalue) != nullptr;
+
+  if (!null_bitmap) {
+    null_bitmap = std::make_shared<std::vector<bool>>();
+    null_bitmap->reserve(max_size);
+  }
+  CHECK(null_bitmap);
+  null_bitmap->push_back(is_valid);
+}
+
 template <typename TYPE, typename enable = void>
 class null_type {};
 
@@ -725,6 +765,11 @@ std::shared_ptr<arrow::RecordBatch> ArrowResultSetConverter::getArrowBatch(
             create_or_append_validity<int64_t>(
                 *scalar_value, column.col_type, null_bitmap_seg[j], entry_count);
             break;
+          case kTEXT:
+            create_or_append_str_value(*scalar_value, value_seg[j], entry_count);
+            create_or_append_str_validity(
+                *scalar_value, column.col_type, null_bitmap_seg[j], entry_count);
+            break;
           default:
             // TODO(miyu): support more scalar types.
             throw std::runtime_error(column.col_type.get_type_name() +
@@ -1130,6 +1175,32 @@ void appendToColumnBuilder<arrow::StringDictionary32Builder, int32_t>(
   }
 }
 
+template <>
+void appendToColumnBuilder<arrow::StringBuilder, std::string>(
+    ArrowResultSetConverter::ColumnBuilder& column_builder,
+    const ValueArray& values,
+    const std::shared_ptr<std::vector<bool>>& is_valid) {
+  auto typed_builder = dynamic_cast<arrow::StringBuilder*>(column_builder.builder.get());
+  CHECK(typed_builder);
+
+  std::vector<std::string> vals = boost::get<std::vector<std::string>>(values);
+
+  if (column_builder.field->nullable()) {
+    CHECK(is_valid.get());
+    // TODO(adb): Generate this instead of the boolean bitmap
+    std::vector<uint8_t> transformed_bitmap;
+    transformed_bitmap.reserve(is_valid->size());
+    std::for_each(
+        is_valid->begin(), is_valid->end(), [&transformed_bitmap](const bool is_valid) {
+          transformed_bitmap.push_back(is_valid ? 1 : 0);
+        });
+
+    ARROW_THROW_NOT_OK(typed_builder->AppendValues(vals, transformed_bitmap.data()));
+  } else {
+    ARROW_THROW_NOT_OK(typed_builder->AppendValues(vals));
+  }
+}
+
 }  // namespace
 
 void ArrowResultSetConverter::append(
@@ -1181,6 +1252,8 @@ void ArrowResultSetConverter::append(
     case kCHAR:
     case kVARCHAR:
     case kTEXT:
+      appendToColumnBuilder<StringBuilder, std::string>(column_builder, values, is_valid);
+      break;
     default:
       // TODO(miyu): support more scalar types.
       throw std::runtime_error(column_builder.col_type.get_type_name() +
