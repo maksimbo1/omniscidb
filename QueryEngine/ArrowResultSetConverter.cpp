@@ -842,6 +842,8 @@ std::shared_ptr<arrow::RecordBatch> ArrowResultSetConverter::getArrowBatch(
         case kTIME:
         case kDATE:
         case kTIMESTAMP:
+        case kTEXT:
+        case kVARCHAR:
           is_lazy = true;
           break;
         default:
