@@ -149,13 +149,14 @@ std::string SPIRVExecuteTest::generateSimpleSPIRV() {
 
   builder.SetInsertPoint(entry);
   Constant* zero = ConstantInt::get(Type::getInt32Ty(ctx), 0);
-  Constant* onef = ConstantFP::get(ctx, APFloat(1.f));
   Value* idx = builder.CreateCall(get_global_idj, zero, "idx");
   auto argit = f->args().begin();
   Value* firstElemSrc = builder.CreateGEP(f->args().begin(), idx, "src.idx");
   Value* firstElemDst = builder.CreateGEP(++argit, idx, "dst.idx");
-  Value* ldSrc = builder.CreateLoad(Type::getFloatTy(ctx), firstElemSrc, "ld");
-  Value* result = builder.CreateFAdd(ldSrc, onef, "foo");
+  Value* ldSrc = builder.CreateLoad(Type::getFloatTy(ctx), firstElemSrc, "ld.src");
+  Value* ldDst = builder.CreateLoad(Type::getFloatTy(ctx), firstElemDst, "ld.dst");
+
+  Value* result = builder.CreateFAdd(ldSrc, ldDst, "foo");
   builder.CreateStore(result, firstElemDst);
   builder.CreateRetVoid();
 
@@ -193,7 +194,7 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
   ze_context_handle_t hContext = nullptr;
   L0InitContext(hDriver, hDevice, hModule, hCommandQueue, hContext, spv);
 
-  ze_command_list_handle_t hCommandList;
+  ze_command_list_handle_t hCommandList, hCommandList2, hCommandList3, hCommandList4;
   ze_kernel_handle_t hKernel;
 
   ze_command_list_desc_t commandListDesc;
@@ -203,6 +204,9 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
   commandListDesc.commandQueueGroupOrdinal = 0;
 
   L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList));
+  L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList2));
+  L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList3));
+  L0_SAFE_CALL(zeCommandListCreate(hContext, hDevice, &commandListDesc, &hCommandList4));
 
   ze_kernel_desc_t kernelDesc;
   kernelDesc.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
@@ -215,8 +219,8 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
   constexpr int a_size = 32;
   AlignedArray<float, a_size> a, b;
   for (auto i = 0; i < a_size; ++i) {
-    a.data[i] = a_size - i;
-    b.data[i] = i;
+    a.data[i] = 5;
+    b.data[i] = 6;
   }
 
   ze_device_mem_alloc_desc_t alloc_desc;
@@ -224,6 +228,26 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
   alloc_desc.pNext = nullptr;
   alloc_desc.flags = 0;
   alloc_desc.ordinal = 0;
+
+  ze_event_pool_desc_t eventPoolDesc = {
+      ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+      nullptr,
+      ZE_EVENT_POOL_FLAG_HOST_VISIBLE,  // all events in pool are visible to Host
+      1                                 // count
+  };
+
+  ze_event_pool_handle_t hEventPool;
+  zeEventPoolCreate(hContext, &eventPoolDesc, 0, nullptr, &hEventPool);
+
+  ze_event_desc_t eventDesc = {
+      ZE_STRUCTURE_TYPE_EVENT_DESC,
+      nullptr,
+      0,  // index
+      0,  // no additional memory/cache coherency required on signal
+      ZE_EVENT_SCOPE_FLAG_DEVICE};
+
+  ze_event_handle_t hEvent;
+  zeEventCreate(hEventPool, &eventDesc, &hEvent);
 
   const float copy_size = a_size * sizeof(float);
   void* dA = nullptr;
@@ -245,19 +269,42 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
       hCommandList, dB, b_void, copy_size, nullptr, 0, nullptr));
 
   L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+
+  L0_SAFE_CALL(zeCommandListClose(hCommandList));
+
   L0_SAFE_CALL(zeKernelSetGroupSize(hKernel, 1, 1, 1));
   ze_group_count_t dispatchTraits = {1, 1, 1};
 
   L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
-      hCommandList, hKernel, &dispatchTraits, nullptr, 0, nullptr));
+      hCommandList2, hKernel, &dispatchTraits, nullptr, 0, nullptr));
 
-  L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr));
+  L0_SAFE_CALL(zeCommandListClose(hCommandList2));
+
+  L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
+      hCommandList3, hKernel, &dispatchTraits, nullptr, 0, nullptr));
+
+  L0_SAFE_CALL(zeCommandListAppendBarrier(hCommandList3, nullptr, 0, nullptr));
+
   L0_SAFE_CALL(zeCommandListAppendMemoryCopy(
-      hCommandList, b_void, dB, copy_size, nullptr, 0, nullptr));
+      hCommandList3, b_void, dB, copy_size, nullptr, 0, nullptr));
 
-  L0_SAFE_CALL(zeCommandListClose(hCommandList));
+  L0_SAFE_CALL(zeCommandListClose(hCommandList3));
+
   L0_SAFE_CALL(
       zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList, nullptr));
+
+  L0_SAFE_CALL(
+      zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+
+  L0_SAFE_CALL(
+      zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList2, nullptr));
+
+  L0_SAFE_CALL(
+      zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
+
+  L0_SAFE_CALL(
+      zeCommandQueueExecuteCommandLists(hCommandQueue, 1, &hCommandList3, nullptr));
+
   L0_SAFE_CALL(
       zeCommandQueueSynchronize(hCommandQueue, std::numeric_limits<uint32_t>::max()));
 
@@ -266,9 +313,9 @@ TEST_F(SPIRVExecuteTest, TranslateSimple) {
   }
   std::cout << std::endl;
 
-  ASSERT_EQ(b.data[0], 33);
-  ASSERT_EQ(b.data[1], 1);
-  ASSERT_EQ(b.data[2], 2);
+  ASSERT_EQ(b.data[0], 16);
+  ASSERT_EQ(b.data[1], 6);
+  ASSERT_EQ(b.data[2], 6);
 
   L0_SAFE_CALL(zeMemFree(hContext, dA));
   L0_SAFE_CALL(zeMemFree(hContext, dB));
@@ -289,8 +336,8 @@ TEST_F(SPIRVExecuteTest, TranslateSimpleWithL0Manager) {
   constexpr int a_size = 32;
   AlignedArray<float, a_size> a, b;
   for (auto i = 0; i < a_size; ++i) {
-    a.data[i] = a_size - i;
-    b.data[i] = i;
+    a.data[i] = 5;
+    b.data[i] = 6;
   }
 
   const float copy_size = a_size * sizeof(float);
@@ -319,9 +366,9 @@ TEST_F(SPIRVExecuteTest, TranslateSimpleWithL0Manager) {
   }
   std::cout << std::endl;
 
-  ASSERT_EQ(b.data[0], 33);
-  ASSERT_EQ(b.data[1], 1);
-  ASSERT_EQ(b.data[2], 2);
+  ASSERT_EQ(b.data[0], 11);
+  ASSERT_EQ(b.data[1], 6);
+  ASSERT_EQ(b.data[2], 6);
 
   L0_SAFE_CALL(zeMemFree(device->ctx(), dA));
   L0_SAFE_CALL(zeMemFree(device->ctx(), dB));
