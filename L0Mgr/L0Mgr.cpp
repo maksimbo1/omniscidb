@@ -84,6 +84,7 @@ L0CommandList::L0CommandList(ze_command_list_handle_t handle) : handle_(handle) 
 void L0CommandList::submit(ze_command_queue_handle_t queue) {
   L0_SAFE_CALL(zeCommandListClose(handle_));
   L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(queue, 1, &handle_, nullptr));
+  L0_SAFE_CALL(zeCommandQueueSynchronize(queue, std::numeric_limits<uint32_t>::max()));
 }
 
 ze_command_list_handle_t L0CommandList::handle() const {
@@ -264,7 +265,6 @@ void L0Manager::copyHostToDevice(int8_t* device_ptr,
 
   cl->copy(device_ptr, host_ptr, num_bytes);
   cl->submit(queue);
-  L0_SAFE_CALL(zeCommandQueueSynchronize(queue, std::numeric_limits<uint32_t>::max()));
 }
 
 void L0Manager::copyDeviceToHost(int8_t* host_ptr,
@@ -277,7 +277,6 @@ void L0Manager::copyDeviceToHost(int8_t* host_ptr,
 
   cl->copy(host_ptr, device_ptr, num_bytes);
   cl->submit(queue);
-  L0_SAFE_CALL(zeCommandQueueSynchronize(queue, std::numeric_limits<uint32_t>::max()));
 }
 
 void L0Manager::copyDeviceToDevice(int8_t* dest_ptr,
