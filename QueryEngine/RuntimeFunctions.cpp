@@ -295,7 +295,7 @@ extern "C" ALWAYS_INLINE int8_t logical_or(const int8_t lhs,
 
 // aggregator implementations
 
-extern "C" ALWAYS_INLINE uint64_t agg_count(uint64_t* agg, const int64_t) {
+extern "C" ALWAYS_INLINE uint64_t agg_count(ADDR_SPACE uint64_t* agg, const int64_t) {
   return (*agg)++;
 }
 
@@ -901,7 +901,7 @@ extern "C" GPU_RT_STUB void write_back_non_grouped_agg(int64_t* input_buffer,
                                                        const int32_t num_agg_cols){};
 // x64 stride functions
 
-extern "C" NEVER_INLINE int32_t pos_start_impl(int32_t* error_code) {
+extern "C" NEVER_INLINE int32_t pos_start_impl(ADDR_SPACE int32_t* error_code) {
   int32_t row_index_resume{0};
   if (error_code) {
     row_index_resume = error_code[0];
@@ -964,7 +964,7 @@ extern "C" NEVER_INLINE const int64_t* init_shared_mem_nop(
 extern "C" NEVER_INLINE void write_back_nop(int64_t* dest,
                                             int64_t* src,
                                             const int32_t sz) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(HAVE_L0)
   // the body is not really needed, just make sure the call is not optimized away
   assert(dest);
 #endif
@@ -983,7 +983,7 @@ extern "C" NEVER_INLINE void init_group_by_buffer_gpu(
     const uint32_t agg_col_count,
     const bool keyless,
     const int8_t warp_size) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(HAVE_L0)
   // the body is not really needed, just make sure the call is not optimized away
   assert(groups_buffer);
 #endif
@@ -998,7 +998,7 @@ extern "C" NEVER_INLINE void init_columnar_group_by_buffer_gpu(
     const bool keyless,
     const bool blocks_share_memory,
     const int32_t frag_idx) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(HAVE_L0)
   // the body is not really needed, just make sure the call is not optimized away
   assert(groups_buffer);
 #endif
@@ -1012,7 +1012,7 @@ extern "C" NEVER_INLINE void init_group_by_buffer_impl(
     const uint32_t agg_col_count,
     const bool keyless,
     const int8_t warp_size) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(HAVE_L0)
   // the body is not really needed, just make sure the call is not optimized away
   assert(groups_buffer);
 #endif
@@ -1317,36 +1317,38 @@ extern "C" NEVER_INLINE void linear_probabilistic_count(uint8_t* bitmap,
   reinterpret_cast<uint32_t*>(bitmap)[word_idx] |= 1 << bit_idx;
 }
 
-extern "C" NEVER_INLINE void query_stub_hoisted_literals(const int8_t** col_buffers,
-                                                         const int8_t* literals,
-                                                         const int64_t* num_rows,
-                                                         const uint64_t* frag_row_offsets,
-                                                         const int32_t* max_matched,
-                                                         const int64_t* init_agg_value,
-                                                         int64_t** out,
-                                                         uint32_t frag_idx,
-                                                         const int64_t* join_hash_tables,
-                                                         int32_t* error_code,
-                                                         int32_t* total_matched) {
-#ifndef _WIN32
+extern "C" NEVER_INLINE void query_stub_hoisted_literals(
+    GLOBAL_ADDR_SPACE const int8_t** col_buffers,
+    GLOBAL_ADDR_SPACE const int8_t* literals,
+    GLOBAL_ADDR_SPACE const int64_t* num_rows,
+    GLOBAL_ADDR_SPACE const uint64_t* frag_row_offsets,
+    GLOBAL_ADDR_SPACE const int32_t* max_matched,
+    GLOBAL_ADDR_SPACE const int64_t* init_agg_value,
+    GLOBAL_ADDR_SPACE int64_t** out,
+    uint32_t frag_idx,
+    GLOBAL_ADDR_SPACE const int64_t* join_hash_tables,
+    GLOBAL_ADDR_SPACE int32_t* error_code,
+    GLOBAL_ADDR_SPACE int32_t* total_matched) {
+#if !defined(_WIN32) && !defined(HAVE_L0)
   assert(col_buffers || literals || num_rows || frag_row_offsets || max_matched ||
          init_agg_value || out || frag_idx || error_code || join_hash_tables ||
          total_matched);
 #endif
 }
 
-extern "C" void multifrag_query_hoisted_literals(const int8_t*** col_buffers,
-                                                 const uint64_t* num_fragments,
-                                                 const int8_t* literals,
-                                                 const int64_t* num_rows,
-                                                 const uint64_t* frag_row_offsets,
-                                                 const int32_t* max_matched,
-                                                 int32_t* total_matched,
-                                                 const int64_t* init_agg_value,
-                                                 int64_t** out,
-                                                 int32_t* error_code,
-                                                 const uint32_t* num_tables_ptr,
-                                                 const int64_t* join_hash_tables) {
+extern "C" void multifrag_query_hoisted_literals(
+    GLOBAL_ADDR_SPACE const int8_t*** col_buffers,
+    GLOBAL_ADDR_SPACE const uint64_t* num_fragments,
+    GLOBAL_ADDR_SPACE const int8_t* literals,
+    GLOBAL_ADDR_SPACE const int64_t* num_rows,
+    GLOBAL_ADDR_SPACE const uint64_t* frag_row_offsets,
+    GLOBAL_ADDR_SPACE const int32_t* max_matched,
+    GLOBAL_ADDR_SPACE int32_t* total_matched,
+    GLOBAL_ADDR_SPACE const int64_t* init_agg_value,
+    GLOBAL_ADDR_SPACE int64_t** out,
+    GLOBAL_ADDR_SPACE int32_t* error_code,
+    GLOBAL_ADDR_SPACE const uint32_t* num_tables_ptr,
+    GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
   for (uint32_t i = 0; i < *num_fragments; ++i) {
     query_stub_hoisted_literals(col_buffers ? col_buffers[i] : nullptr,
                                 literals,
@@ -1372,7 +1374,7 @@ extern "C" NEVER_INLINE void query_stub(const int8_t** col_buffers,
                                         const int64_t* join_hash_tables,
                                         int32_t* error_code,
                                         int32_t* total_matched) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(HAVE_L0)
   assert(col_buffers || num_rows || frag_row_offsets || max_matched || init_agg_value ||
          out || frag_idx || error_code || join_hash_tables || total_matched);
 #endif

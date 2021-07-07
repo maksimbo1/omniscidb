@@ -2649,6 +2649,12 @@ TEST(Select, ApproxMedianValidate) {
   }
 }
 
+TEST(Select, Simplest) {
+  for (auto dt : {ExecutorDeviceType::L0}) {
+    c("SELECT x FROM test where x >= 8;", dt);
+  }
+}
+
 TEST(Select, ScanNoAggregation) {
   for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
     SKIP_NO_GPU();

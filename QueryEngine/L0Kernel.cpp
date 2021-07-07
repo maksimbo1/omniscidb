@@ -23,6 +23,9 @@ L0BinResult spv_to_bin(const std::string& spv,
   out.write((char*)spv.data(), spv.size());
 
   auto module = device->create_module((uint8_t*)spv.data(), spv.size(), true);
+
+  std::cerr << "Attempting to create a kernel named: " << name << std::endl;
+
   auto kernel = module->create_kernel(name.c_str(), 1, 1, 1);
 
   return {kernel, module};

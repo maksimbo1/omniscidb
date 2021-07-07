@@ -1204,6 +1204,8 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
 #ifdef HAVE_L0
   auto module = func->getParent();
 
+  CHECK(module);
+
   auto pass_manager_builder = llvm::PassManagerBuilder();
   llvm::legacy::PassManager PM;
   pass_manager_builder.populateModulePassManager(PM);
@@ -1242,10 +1244,10 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
     }
   }
 
-  for (auto& pFn : rt_funcs) {
-    // pFn->removeFromParent();
-    pFn->eraseFromParent();
-  }
+  // for (auto& pFn : rt_funcs) {
+  //   // pFn->removeFromParent();
+  //   pFn->eraseFromParent();
+  // }
 
   // todo: enable when runtime functions are supported
   // for (auto& pFn : rt_funcs) {
@@ -1262,6 +1264,8 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
   CHECK(wrapper_func);
 
   wrapper_func->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+
+  llvm::errs() << *module;
 
   std::error_code EC;
   llvm::raw_fd_ostream OS("ir.bc", EC, llvm::sys::fs::F_None);
@@ -1727,6 +1731,8 @@ void bind_query(llvm::Function* query_func,
       continue;
     }
     auto& query_call = llvm::cast<llvm::CallInst>(*it);
+    std::cerr << "checking: " << std::string(query_call.getCalledFunction()->getName())
+              << " == " << query_fname << std::endl;
     if (std::string(query_call.getCalledFunction()->getName()) == query_fname) {
       query_stubs.push_back(&query_call);
     }
@@ -2464,6 +2470,9 @@ bool is_gpu_shared_mem_supported(const QueryMemoryDescriptor* query_mem_desc_ptr
   if (device_type == ExecutorDeviceType::CPU) {
     return false;
   }
+  if (device_type == ExecutorDeviceType::L0) {
+    return false;
+  }
   if (query_mem_desc_ptr->didOutputColumnar()) {
     return false;
   }
@@ -2954,10 +2963,19 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
       "multifrag_query" + std::string(co.hoist_literals ? "_hoisted_literals" : ""));
   CHECK(multifrag_query_func);
 
-  if (co.device_type == ExecutorDeviceType::GPU && eo.allow_multifrag) {
+  std::cerr << "multifrag is allowed: " << eo.allow_multifrag << std::endl;
+  std::cerr << serialize_llvm_object(multifrag_query_func) << "\n" << std::endl;
+
+  if (((co.device_type == ExecutorDeviceType::GPU) ||
+       (co.device_type == ExecutorDeviceType::L0)) &&
+      eo.allow_multifrag) {
+    std::cerr << "inserting errors" << std::endl;
     insertErrorCodeChecker(
         multifrag_query_func, co.hoist_literals, eo.allow_runtime_query_interrupt);
   }
+
+  std::cerr << "after insert check" << std::endl;
+  std::cerr << serialize_llvm_object(multifrag_query_func) << "\n" << std::endl;
 
   bind_query(query_func,
              "query_stub" + std::string(co.hoist_literals ? "_hoisted_literals" : ""),
@@ -3023,10 +3041,20 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   LOG(IR) << serialize_llvm_object(cgen_state_->module_) << "\nEnd of IR";
 #endif
 
+  std::cerr << "Generated llvm ir" << std::endl;
+  std::cerr << serialize_llvm_object(cgen_state_->row_func_) << "\nEnd of IR\n\n\n"
+            << std::endl;
+  std::cerr << "Multifrag query func ir: " << std::endl;
+  std::cerr << serialize_llvm_object(multifrag_query_func)
+            << "\nEnd of Multifrag func\n\n"
+            << std::endl;
+
   // Run some basic validation checks on the LLVM IR before code is generated below.
   verify_function_ir(cgen_state_->row_func_);
+  std::cerr << "row funciton is good" << std::endl;
   if (cgen_state_->filter_func_) {
     verify_function_ir(cgen_state_->filter_func_);
+    std::cerr << "filter funciton is good" << std::endl;
   }
 
   // Generate final native code from the LLVM IR.
@@ -3053,6 +3081,7 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
       LOG(FATAL) << "Invalid device type";
       return {};
   }
+  std::cerr << "Compiled!" << std::endl;
   return std::make_tuple(CompilationResult{compilation_context,
                                            cgen_state_->getLiterals(),
                                            output_columnar,

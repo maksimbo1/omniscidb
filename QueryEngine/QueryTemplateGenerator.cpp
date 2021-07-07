@@ -39,7 +39,9 @@ inline llvm::Type* get_pointer_element_type(llvm::Value* value) {
 }
 
 template <class Attributes>
-llvm::Function* default_func_builder(llvm::Module* mod, const std::string& name) {
+llvm::Function* default_func_builder(llvm::Module* mod,
+                                     const std::string& name,
+                                     llvm::CallingConv::ID CC) {
   using namespace llvm;
 
   std::vector<Type*> func_args;
@@ -55,7 +57,7 @@ llvm::Function* default_func_builder(llvm::Module* mod, const std::string& name)
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/name,
         mod);  // (external, no body)
-    func_ptr->setCallingConv(CallingConv::C);
+    func_ptr->setCallingConv(CC);
   }
 
   Attributes func_pal;
@@ -76,17 +78,20 @@ llvm::Function* default_func_builder(llvm::Module* mod, const std::string& name)
 }
 
 template <class Attributes>
-llvm::Function* pos_start(llvm::Module* mod) {
-  return default_func_builder<Attributes>(mod, "pos_start");
+llvm::Function* pos_start(llvm::Module* mod,
+                          llvm::CallingConv::ID CC = llvm::CallingConv::C) {
+  return default_func_builder<Attributes>(mod, "pos_start", CC);
 }
 
 template <class Attributes>
-llvm::Function* group_buff_idx(llvm::Module* mod) {
-  return default_func_builder<Attributes>(mod, "group_buff_idx");
+llvm::Function* group_buff_idx(llvm::Module* mod,
+                               llvm::CallingConv::ID CC = llvm::CallingConv::C) {
+  return default_func_builder<Attributes>(mod, "group_buff_idx", CC);
 }
 
 template <class Attributes>
-llvm::Function* pos_step(llvm::Module* mod) {
+llvm::Function* pos_step(llvm::Module* mod,
+                         llvm::CallingConv::ID CC = llvm::CallingConv::C) {
   using namespace llvm;
 
   std::vector<Type*> func_args;
@@ -102,7 +107,7 @@ llvm::Function* pos_step(llvm::Module* mod) {
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/"pos_step",
         mod);  // (external, no body)
-    func_ptr->setCallingConv(CallingConv::C);
+    func_ptr->setCallingConv(CC);
   }
 
   Attributes func_pal;
@@ -125,19 +130,22 @@ llvm::Function* pos_step(llvm::Module* mod) {
 template <class Attributes>
 llvm::Function* row_process(llvm::Module* mod,
                             const size_t aggr_col_count,
-                            const bool hoist_literals) {
+                            const bool hoist_literals,
+                            llvm::CallingConv::ID CC = llvm::CallingConv::C,
+                            unsigned int AS = 0) {
   using namespace llvm;
 
   std::vector<Type*> func_args;
   auto i8_type = IntegerType::get(mod->getContext(), 8);
   auto i32_type = IntegerType::get(mod->getContext(), 32);
   auto i64_type = IntegerType::get(mod->getContext(), 64);
-  auto pi32_type = PointerType::get(i32_type, 0);
-  auto pi64_type = PointerType::get(i64_type, 0);
+  auto pi32_type = PointerType::get(i32_type, AS);
+  auto pi64_type = PointerType::get(i64_type, AS);
+  auto pi64_stack_type = PointerType::get(i64_type, 0);
 
   if (aggr_col_count) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
-      func_args.push_back(pi64_type);
+      func_args.push_back(pi64_stack_type);
     }
   } else {                           // group by query
     func_args.push_back(pi64_type);  // groups buffer
@@ -153,7 +161,7 @@ llvm::Function* row_process(llvm::Module* mod,
   func_args.push_back(pi64_type);
   func_args.push_back(pi64_type);
   if (hoist_literals) {
-    func_args.push_back(PointerType::get(i8_type, 0));
+    func_args.push_back(PointerType::get(i8_type, AS));
   }
   FunctionType* func_type = FunctionType::get(
       /*Result=*/i32_type,
@@ -169,7 +177,7 @@ llvm::Function* row_process(llvm::Module* mod,
         /*Linkage=*/GlobalValue::ExternalLinkage,
         /*Name=*/func_name,
         mod);  // (external, no body)
-    func_ptr->setCallingConv(CallingConv::C);
+    func_ptr->setCallingConv(CC);
 
     Attributes func_pal;
     {
@@ -203,14 +211,17 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
                                                                  : CallingConv::C;
   unsigned int addr_space = (co.device_type == ExecutorDeviceType::L0) ? 4 : 0;
 
-  auto func_pos_start = pos_start<Attributes>(mod);
+  auto func_pos_start = pos_start<Attributes>(mod, calling_conv);
   CHECK(func_pos_start);
-  auto func_pos_step = pos_step<Attributes>(mod);
+  auto func_pos_step = pos_step<Attributes>(mod, calling_conv);
   CHECK(func_pos_step);
-  auto func_group_buff_idx = group_buff_idx<Attributes>(mod);
+  auto func_group_buff_idx = group_buff_idx<Attributes>(mod, calling_conv);
   CHECK(func_group_buff_idx);
-  auto func_row_process = row_process<Attributes>(
-      mod, is_estimate_query ? 1 : aggr_col_count, co.hoist_literals);
+  auto func_row_process = row_process<Attributes>(mod,
+                                                  is_estimate_query ? 1 : aggr_col_count,
+                                                  co.hoist_literals,
+                                                  calling_conv,
+                                                  addr_space);
   CHECK(func_row_process);
 
   auto i8_type = IntegerType::get(mod->getContext(), 8);
@@ -535,7 +546,12 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   pos_inc_pre->replaceAllUsesWith(pos_inc);
   delete pos_inc_pre;
 
-  if (verifyFunction(*query_func_ptr)) {
+  std::error_code ec;
+  raw_fd_ostream query_template_dump("query.ll", ec);
+  mod->print(query_template_dump, nullptr);
+
+  llvm::raw_os_ostream output(std::cerr);
+  if (verifyFunction(*query_func_ptr, &output)) {
     LOG(FATAL) << "Generated invalid code. ";
   }
 
