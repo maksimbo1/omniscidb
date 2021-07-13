@@ -17,6 +17,7 @@
 #include "DeviceKernel.h"
 
 #include "CompilationContext.h"
+#include "L0Kernel.h"
 #include "NvidiaKernel.h"
 
 #ifdef HAVE_CUDA
@@ -153,11 +154,52 @@ class NvidiaKernel : public DeviceKernel {
   int device_id;
 };
 #endif
+#ifdef HAVE_L0
+class L0EventClock : public DeviceClock {
+ public:
+  L0EventClock() {}
+  virtual void start() override {}
+  virtual int stop() override { return 0; }
+};
+
+class L0Kernel : public DeviceKernel {
+  int device_id;
+  l0::L0Kernel* kernel;
+
+ public:
+  L0Kernel(const CompilationContext* ctx, int device_id) : device_id(device_id) {
+    auto l0_ctx = dynamic_cast<const L0CompilationContext*>(ctx);
+    CHECK(l0_ctx);
+    kernel = l0_ctx->getNativeCode(device_id);
+  }
+
+  void launch(unsigned int gridDimX,
+              unsigned int gridDimY,
+              unsigned int gridDimZ,
+              unsigned int blockDimX,
+              unsigned int blockDimY,
+              unsigned int blockDimZ,
+              unsigned int sharedMemBytes,
+              void** kernelParams) override {
+    CHECK(kernel);
+    std::cerr << "I'm launching!" << std::endl;
+  }
+
+  void initializeDynamicWatchdog(bool could_interrupt, uint64_t cycle_budget) override {}
+  void initializeRuntimeInterrupter() override {}
+
+  std::unique_ptr<DeviceClock> make_clock() override {
+    return std::make_unique<L0EventClock>();
+  }
+};
+#endif
 
 std::unique_ptr<DeviceKernel> create_device_kernel(const CompilationContext* ctx,
                                                    int device_id) {
 #ifdef HAVE_CUDA
   return std::make_unique<NvidiaKernel>(ctx, device_id);
+#elif HAVE_L0
+  return std::make_unique<L0Kernel>(ctx, device_id);
 #else
   return nullptr;
 #endif

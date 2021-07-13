@@ -46,6 +46,12 @@ class L0CompilationContext : public CompilationContext {
     return fn_ptrs;
   }
 
+  l0::L0Kernel* getNativeCode(const size_t device_id) const {
+    CHECK_LT(device_id, contexts_per_device_.size());
+    auto device_context = contexts_per_device_[device_id].get();
+    return device_context->kernel();
+  }
+
   void addDeviceCode(L0DevCompilationContextPtr&& device_context) {
     contexts_per_device_.push_back(move(device_context));
   }

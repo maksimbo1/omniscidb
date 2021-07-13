@@ -54,6 +54,9 @@ QueryExecutionContext::QueryExecutionContext(
   if (device_type == ExecutorDeviceType::GPU) {
     gpu_allocator_ = std::make_unique<CudaAllocator>(&data_mgr, device_id);
   }
+  if (device_type == ExecutorDeviceType::L0) {
+    gpu_allocator_ = std::make_unique<L0Allocator>(&data_mgr, device_id);
+  }
 
   auto render_allocator_map = render_info && render_info->isPotentialInSituRender()
                                   ? render_info->render_allocator_map_ptr.get()
