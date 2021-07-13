@@ -2720,6 +2720,8 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
                                   co.device_type,
                                   cuda_mgr ? this->blockSize() : 1,
                                   cuda_mgr ? this->numBlocksPerMP() : 1);
+  std::cerr << "gpu_shared_mem_optimization is "
+            << (gpu_shared_mem_optimization ? "on" : "off") << std::endl;
   if (gpu_shared_mem_optimization) {
     // disable interleaved bins optimization on the GPU
     query_mem_desc->setHasInterleavedBinsOnGpu(false);
@@ -2733,6 +2735,12 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   const GpuSharedMemoryContext gpu_smem_context(
       get_shared_memory_size(gpu_shared_mem_optimization, query_mem_desc.get()));
 
+  if (co.device_type == ExecutorDeviceType::L0) {
+    CHECK(gpu_smem_context.getSharedMemorySize() == 0);
+    CHECK(gpu_smem_context.isSharedMemoryUsed() == false);
+  }
+
+  // fixme
   if (co.device_type == ExecutorDeviceType::GPU) {
     const size_t num_count_distinct_descs =
         query_mem_desc->getCountDistinctDescriptorsSize();

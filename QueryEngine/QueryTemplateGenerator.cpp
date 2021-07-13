@@ -233,6 +233,10 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   auto pi64_type = PointerType::get(i64_type, addr_space);
   auto ppi64_type = PointerType::get(pi64_type, addr_space);
 
+  auto byte_stream_type =
+      (co.device_type == ExecutorDeviceType::L0) ? pi8_type : ppi8_type;
+  auto out_type = (co.device_type == ExecutorDeviceType::L0) ? pi64_type : ppi64_type;
+
   std::vector<Type*> query_args;
   query_args.push_back(ppi8_type);
   if (co.hoist_literals) {

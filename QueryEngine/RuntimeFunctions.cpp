@@ -1318,17 +1318,17 @@ extern "C" NEVER_INLINE void linear_probabilistic_count(uint8_t* bitmap,
 }
 
 extern "C" NEVER_INLINE void query_stub_hoisted_literals(
-    GLOBAL_ADDR_SPACE const int8_t** col_buffers,
-    GLOBAL_ADDR_SPACE const int8_t* literals,
-    GLOBAL_ADDR_SPACE const int64_t* num_rows,
-    GLOBAL_ADDR_SPACE const uint64_t* frag_row_offsets,
-    GLOBAL_ADDR_SPACE const int32_t* max_matched,
-    GLOBAL_ADDR_SPACE const int64_t* init_agg_value,
-    GLOBAL_ADDR_SPACE int64_t** out,
+    ADDR_SPACE const int8_t** col_buffers,
+    ADDR_SPACE const int8_t* literals,
+    ADDR_SPACE const int64_t* num_rows,
+    ADDR_SPACE const uint64_t* frag_row_offsets,
+    ADDR_SPACE const int32_t* max_matched,
+    ADDR_SPACE const int64_t* init_agg_value,
+    ADDR_SPACE int64_t** out,
     uint32_t frag_idx,
-    GLOBAL_ADDR_SPACE const int64_t* join_hash_tables,
-    GLOBAL_ADDR_SPACE int32_t* error_code,
-    GLOBAL_ADDR_SPACE int32_t* total_matched) {
+    ADDR_SPACE const int64_t* join_hash_tables,
+    ADDR_SPACE int32_t* error_code,
+    ADDR_SPACE int32_t* total_matched) {
 #if !defined(_WIN32) && !defined(HAVE_L0)
   assert(col_buffers || literals || num_rows || frag_row_offsets || max_matched ||
          init_agg_value || out || frag_idx || error_code || join_hash_tables ||
@@ -1336,19 +1336,19 @@ extern "C" NEVER_INLINE void query_stub_hoisted_literals(
 #endif
 }
 
-extern "C" void multifrag_query_hoisted_literals(
-    GLOBAL_ADDR_SPACE const int8_t*** col_buffers,
-    GLOBAL_ADDR_SPACE const uint64_t* num_fragments,
-    GLOBAL_ADDR_SPACE const int8_t* literals,
-    GLOBAL_ADDR_SPACE const int64_t* num_rows,
-    GLOBAL_ADDR_SPACE const uint64_t* frag_row_offsets,
-    GLOBAL_ADDR_SPACE const int32_t* max_matched,
-    GLOBAL_ADDR_SPACE int32_t* total_matched,
-    GLOBAL_ADDR_SPACE const int64_t* init_agg_value,
-    GLOBAL_ADDR_SPACE int64_t** out,
-    GLOBAL_ADDR_SPACE int32_t* error_code,
-    GLOBAL_ADDR_SPACE const uint32_t* num_tables_ptr,
-    GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
+#ifndef HAVE_L0
+extern "C" void multifrag_query_hoisted_literals(const int8_t*** col_buffers,
+                                                 const uint64_t* num_fragments,
+                                                 const int8_t* literals,
+                                                 const int64_t* num_rows,
+                                                 const uint64_t* frag_row_offsets,
+                                                 const int32_t* max_matched,
+                                                 int32_t* total_matched,
+                                                 const int64_t* init_agg_value,
+                                                 int64_t** out,
+                                                 int32_t* error_code,
+                                                 const uint32_t* num_tables_ptr,
+                                                 const int64_t* join_hash_tables) {
   for (uint32_t i = 0; i < *num_fragments; ++i) {
     query_stub_hoisted_literals(col_buffers ? col_buffers[i] : nullptr,
                                 literals,
@@ -1363,6 +1363,35 @@ extern "C" void multifrag_query_hoisted_literals(
                                 error_code);
   }
 }
+#else
+extern "C" void multifrag_query_hoisted_literals(
+    GLOBAL_ADDR_SPACE const int8_t* col_buffers,
+    GLOBAL_ADDR_SPACE const uint64_t* num_fragments,
+    GLOBAL_ADDR_SPACE const int8_t* literals,
+    GLOBAL_ADDR_SPACE const int64_t* num_rows,
+    GLOBAL_ADDR_SPACE const uint64_t* frag_row_offsets,
+    GLOBAL_ADDR_SPACE const int32_t* max_matched,
+    GLOBAL_ADDR_SPACE int32_t* total_matched,
+    GLOBAL_ADDR_SPACE const int64_t* init_agg_value,
+    GLOBAL_ADDR_SPACE int64_t* out,
+    GLOBAL_ADDR_SPACE int32_t* error_code,
+    GLOBAL_ADDR_SPACE const uint32_t* num_tables_ptr,
+    GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
+  for (uint32_t i = 0; i < *num_fragments; ++i) {
+    query_stub_hoisted_literals((ADDR_SPACE const int8_t**)(col_buffers),  // fixme
+                                literals,
+                                &num_rows[i * (*num_tables_ptr)],
+                                &frag_row_offsets[i * (*num_tables_ptr)],
+                                max_matched,
+                                init_agg_value,
+                                (ADDR_SPACE int64_t**)out,
+                                i,
+                                join_hash_tables,
+                                total_matched,
+                                error_code);
+  }
+}
+#endif
 
 extern "C" NEVER_INLINE void query_stub(const int8_t** col_buffers,
                                         const int64_t* num_rows,

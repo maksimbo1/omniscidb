@@ -2988,6 +2988,7 @@ int32_t Executor::executePlanWithoutGroupBy(
   if (g_enable_dynamic_watchdog && interrupted_.load()) {
     throw QueryExecutionError(ERR_INTERRUPTED);
   }
+  // TODO
   if (device_type == ExecutorDeviceType::CPU) {
     auto cpu_generated_code = std::dynamic_pointer_cast<CpuCompilationContext>(
         compilation_result.generated_code);
