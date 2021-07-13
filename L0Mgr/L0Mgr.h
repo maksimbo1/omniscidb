@@ -205,6 +205,8 @@ class L0Manager {
 
   const std::vector<std::shared_ptr<L0Driver>>& drivers() const;
 
+  int getDeviceCount() const;
+
  private:
   std::vector<std::shared_ptr<L0Driver>> drivers_;
 };
