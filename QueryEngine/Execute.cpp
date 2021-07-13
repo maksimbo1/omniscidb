@@ -1421,6 +1421,24 @@ ResultSetPtr Executor::executeWorkUnit(size_t& max_groups_buffer_entry_guess,
   }
 }
 
+std::ostream& operator<<(std::ostream& os, const ExecutorDeviceType& type) {
+  switch (type) {
+    case ExecutorDeviceType::CPU:
+      os << "ExecutorDeviceType::CPU";
+      break;
+    case ExecutorDeviceType::GPU:
+      os << "ExecutorDeviceType::GPU";
+      break;
+    case ExecutorDeviceType::L0:
+      os << "ExecutorDeviceType::L0";
+      break;
+
+    default:
+      os << "unknown device type";
+  }
+  return os;
+}
+
 ResultSetPtr Executor::executeWorkUnitImpl(
     size_t& max_groups_buffer_entry_guess,
     const bool is_agg,
@@ -1437,6 +1455,8 @@ ResultSetPtr Executor::executeWorkUnitImpl(
   INJECT_TIMER(Exec_executeWorkUnit);
   const auto [ra_exe_unit, deleted_cols_map] = addDeletedColumn(ra_exe_unit_in, co);
   const auto device_type = getDeviceTypeForTargets(ra_exe_unit, co.device_type);
+  std::cerr << "USING DEVICE TYPE: " << device_type << "; is_agg = " << is_agg
+            << std::endl;
   CHECK(!query_infos.empty());
   if (!max_groups_buffer_entry_guess) {
     // The query has failed the first execution attempt because of running out
