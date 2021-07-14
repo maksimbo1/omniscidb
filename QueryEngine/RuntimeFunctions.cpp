@@ -372,7 +372,7 @@ extern "C" ALWAYS_INLINE void agg_min(int64_t* agg, const int64_t val) {
   *agg = std::min(*agg, val);
 }
 
-extern "C" ALWAYS_INLINE void agg_id(int64_t* agg, const int64_t val) {
+extern "C" ALWAYS_INLINE void agg_id(ADDR_SPACE int64_t* agg, const int64_t val) {
   *agg = val;
 }
 

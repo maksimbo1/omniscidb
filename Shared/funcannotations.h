@@ -60,6 +60,8 @@
 #ifdef HAVE_L0
 #define ADDR_SPACE __attribute__((opencl_generic))
 #define GLOBAL_ADDR_SPACE __attribute__((opencl_global))
+// #define ADDR_SPACE
+// #define GLOBAL_ADDR_SPACE
 #else
 #define ADDR_SPACE
 #define GLOBAL_ADDR_SPACE

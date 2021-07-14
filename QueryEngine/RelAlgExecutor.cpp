@@ -2945,10 +2945,11 @@ ExecutionResult RelAlgExecutor::executeWorkUnit(
       } else if (eo.executor_type == ::ExecutorType::Extern) {
         ra_exe_unit.scan_limit = 0;
       } else if (!eo.just_explain) {
-        const auto filter_count_all = getFilteredCountAll(work_unit, true, co, eo);
-        if (filter_count_all) {
-          ra_exe_unit.scan_limit = std::max(*filter_count_all, size_t(1));
-        }
+        // const auto filter_count_all = getFilteredCountAll(work_unit, true, co, eo);
+        // if (filter_count_all) {
+        //   ra_exe_unit.scan_limit = std::max(*filter_count_all, size_t(1));
+        // }
+        ra_exe_unit.scan_limit = 20;
       }
     }
   }

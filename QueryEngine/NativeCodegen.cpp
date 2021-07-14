@@ -2808,7 +2808,11 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
 
   const auto agg_slot_count = ra_exe_unit.estimator ? size_t(1) : agg_fnames.size();
 
+  // todo: why is it true?
   const bool is_group_by{query_mem_desc->isGroupBy()};
+  CHECK(is_group_by == false);
+  // const bool is_group_by = false;
+  std::cerr << "Is group by? " << is_group_by << std::endl;
   auto [query_func, row_func_call] = is_group_by
                                          ? query_group_by_template(cgen_state_->module_,
                                                                    co.hoist_literals,
