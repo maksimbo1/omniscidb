@@ -57,7 +57,11 @@ class NvidiaKernel : public DeviceKernel {
               unsigned int blockDimY,
               unsigned int blockDimZ,
               unsigned int sharedMemBytes,
-              void** kernelParams) override {
+              std::vector<int8_t*>& kernelParams) override {
+    std::vector<void*> param_ptrs;
+    for (auto& param : kernel_params) {
+      param_ptrs.push_back(&param);
+    }
     checkCudaErrors(cuLaunchKernel(function_ptr,
                                    gridDimX,
                                    gridDimY,
@@ -67,7 +71,7 @@ class NvidiaKernel : public DeviceKernel {
                                    blockDimZ,
                                    sharedMemBytes,
                                    nullptr,
-                                   kernelParams,
+                                   param_ptrs,
                                    nullptr));
   }
 
@@ -165,12 +169,14 @@ class L0EventClock : public DeviceClock {
 class L0Kernel : public DeviceKernel {
   int device_id;
   l0::L0Kernel* kernel;
+  l0::L0Device* device;
 
  public:
   L0Kernel(const CompilationContext* ctx, int device_id) : device_id(device_id) {
     auto l0_ctx = dynamic_cast<const L0CompilationContext*>(ctx);
     CHECK(l0_ctx);
     kernel = l0_ctx->getNativeCode(device_id);
+    device = l0_ctx->getDevice(device_id);
   }
 
   void launch(unsigned int gridDimX,
@@ -180,9 +186,18 @@ class L0Kernel : public DeviceKernel {
               unsigned int blockDimY,
               unsigned int blockDimZ,
               unsigned int sharedMemBytes,
-              void** kernelParams) override {
+              std::vector<int8_t*>& kernelParams) override {
     CHECK(kernel);
+    CHECK(device);
+
     std::cerr << "I'm launching!" << std::endl;
+
+    // todo: allocate buffer for params and set it as kernel argument
+
+    auto q = device->command_queue();
+    auto q_list = device->create_command_list();
+    q_list->launch(kernel, kernelParams);
+    q_list->submit(*q.get());
   }
 
   void initializeDynamicWatchdog(bool could_interrupt, uint64_t cycle_budget) override {}

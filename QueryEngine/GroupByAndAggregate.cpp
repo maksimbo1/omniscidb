@@ -354,6 +354,12 @@ int64_t GroupByAndAggregate::getShardedTopBucket(const ColRangeInfo& col_range_i
     device_count = executor_->getCatalog()->getDataMgr().getCudaMgr()->getDeviceCount();
     CHECK_GT(device_count, 0u);
   }
+  if (device_type_ == ExecutorDeviceType::L0) {
+    auto l0_mgr = executor_->getCatalog()->getDataMgr().getL0Mgr();
+    CHECK(l0_mgr);
+    device_count = executor_->getCatalog()->getDataMgr().getL0Mgr()->getDeviceCount();
+    CHECK_GT(device_count, 0u);
+  }
 
   int64_t bucket{col_range_info.bucket};
 

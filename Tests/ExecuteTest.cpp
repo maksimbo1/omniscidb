@@ -2651,7 +2651,7 @@ TEST(Select, ApproxMedianValidate) {
 
 TEST(Select, Simplest) {
   for (auto dt : {ExecutorDeviceType::L0}) {
-    c("SELECT x FROM test where x >= 8;", dt);
+    c("SELECT count(x) FROM test where x >= 8;", dt);
   }
 }
 

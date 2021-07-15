@@ -1292,7 +1292,7 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
 
   auto compilation_ctx = std::make_shared<L0CompilationContext>();
   auto device_compilation_ctx = std::make_unique<L0DeviceCompilationContext>(
-      bin_result.kernel, bin_result.module, l0_mgr, 0, 1);
+      bin_result.device, bin_result.kernel, bin_result.module, l0_mgr, 0, 1);
   compilation_ctx->addDeviceCode(move(device_compilation_ctx));
   return compilation_ctx;
 #else
@@ -2808,10 +2808,7 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
 
   const auto agg_slot_count = ra_exe_unit.estimator ? size_t(1) : agg_fnames.size();
 
-  // todo: why is it true?
   const bool is_group_by{query_mem_desc->isGroupBy()};
-  CHECK(is_group_by == false);
-  // const bool is_group_by = false;
   std::cerr << "Is group by? " << is_group_by << std::endl;
   auto [query_func, row_func_call] = is_group_by
                                          ? query_group_by_template(cgen_state_->module_,

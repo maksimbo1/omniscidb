@@ -141,18 +141,19 @@ llvm::Function* row_process(llvm::Module* mod,
   auto i64_type = IntegerType::get(mod->getContext(), 64);
   auto pi32_type = PointerType::get(i32_type, AS);
   auto pi64_type = PointerType::get(i64_type, AS);
+  auto pi32_stack_type = PointerType::get(i32_type, 0);
   auto pi64_stack_type = PointerType::get(i64_type, 0);
 
   if (aggr_col_count) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
       func_args.push_back(pi64_stack_type);
     }
-  } else {                           // group by query
-    func_args.push_back(pi64_type);  // groups buffer
-    func_args.push_back(pi32_type);  // 1 iff current row matched, else 0
-    func_args.push_back(pi32_type);  // total rows matched from the caller
-    func_args.push_back(pi32_type);  // total rows matched before atomic increment
-    func_args.push_back(pi32_type);  // max number of slots in the output buffer
+  } else {                                 // group by query
+    func_args.push_back(pi64_type);        // groups buffer
+    func_args.push_back(pi32_stack_type);  // 1 iff current row matched, else 0
+    func_args.push_back(pi32_type);        // total rows matched from the caller
+    func_args.push_back(pi32_stack_type);  // total rows matched before atomic increment
+    func_args.push_back(pi32_type);        // max number of slots in the output buffer
   }
 
   func_args.push_back(pi64_type);  // aggregate init values
@@ -206,6 +207,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
     const CompilationOptions& co,
     const bool is_estimate_query,
     const GpuSharedMemoryContext& gpu_smem_context) {
+  std::cerr << "Building non-group by template!" << std::endl;
   using namespace llvm;
   auto calling_conv = (co.device_type == ExecutorDeviceType::L0) ? CallingConv::SPIR_FUNC
                                                                  : CallingConv::C;
@@ -566,19 +568,25 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
     const ExecutorDeviceType device_type,
     const bool check_scan_limit,
     const GpuSharedMemoryContext& gpu_smem_context) {
+  std::cerr << "Building group by template!" << std::endl;
   if (gpu_smem_context.isSharedMemoryUsed()) {
     CHECK(device_type == ExecutorDeviceType::GPU);
   }
   using namespace llvm;
+  auto calling_conv =
+      (device_type == ExecutorDeviceType::L0) ? CallingConv::SPIR_FUNC : CallingConv::C;
+  unsigned int addr_space = (device_type == ExecutorDeviceType::L0) ? 4 : 0;
 
-  auto func_pos_start = pos_start<Attributes>(mod);
+  auto func_pos_start = pos_start<Attributes>(mod, calling_conv);
   CHECK(func_pos_start);
-  auto func_pos_step = pos_step<Attributes>(mod);
+  auto func_pos_step = pos_step<Attributes>(mod, calling_conv);
   CHECK(func_pos_step);
-  auto func_group_buff_idx = group_buff_idx<Attributes>(mod);
+  auto func_group_buff_idx = group_buff_idx<Attributes>(mod, calling_conv);
   CHECK(func_group_buff_idx);
-  auto func_row_process = row_process<Attributes>(mod, 0, hoist_literals);
+  auto func_row_process =
+      row_process<Attributes>(mod, 0, hoist_literals, calling_conv, addr_space);
   CHECK(func_row_process);
+  std::cerr << "row func: " << serialize_llvm_object(func_row_process) << std::endl;
   auto func_init_shared_mem = gpu_smem_context.isSharedMemoryUsed()
                                   ? mod->getFunction("init_shared_mem")
                                   : mod->getFunction("init_shared_mem_nop");
@@ -589,11 +597,11 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
 
   auto i32_type = IntegerType::get(mod->getContext(), 32);
   auto i64_type = IntegerType::get(mod->getContext(), 64);
-  auto pi8_type = PointerType::get(IntegerType::get(mod->getContext(), 8), 0);
-  auto pi32_type = PointerType::get(i32_type, 0);
-  auto pi64_type = PointerType::get(i64_type, 0);
-  auto ppi64_type = PointerType::get(pi64_type, 0);
-  auto ppi8_type = PointerType::get(pi8_type, 0);
+  auto pi8_type = PointerType::get(IntegerType::get(mod->getContext(), 8), addr_space);
+  auto pi32_type = PointerType::get(i32_type, addr_space);
+  auto pi64_type = PointerType::get(i64_type, addr_space);
+  auto ppi64_type = PointerType::get(pi64_type, addr_space);
+  auto ppi8_type = PointerType::get(pi8_type, addr_space);
 
   std::vector<Type*> query_args;
   query_args.push_back(ppi8_type);
@@ -626,7 +634,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
       /*Name=*/"query_group_by_template",
       mod);
 
-  query_func_ptr->setCallingConv(CallingConv::C);
+  query_func_ptr->setCallingConv(calling_conv);
 
   Attributes query_func_pal;
   {
@@ -725,19 +733,19 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   auto crt_matched_ptr = new AllocaInst(i32_type, 0, "crt_matched", bb_entry);
   auto old_total_matched_ptr = new AllocaInst(i32_type, 0, "old_total_matched", bb_entry);
   CallInst* pos_start = CallInst::Create(func_pos_start, "", bb_entry);
-  pos_start->setCallingConv(CallingConv::C);
+  pos_start->setCallingConv(calling_conv);
   pos_start->setTailCall(true);
   Attributes pos_start_pal;
   pos_start->setAttributes(pos_start_pal);
 
   CallInst* pos_step = CallInst::Create(func_pos_step, "", bb_entry);
-  pos_step->setCallingConv(CallingConv::C);
+  pos_step->setCallingConv(calling_conv);
   pos_step->setTailCall(true);
   Attributes pos_step_pal;
   pos_step->setAttributes(pos_step_pal);
 
   CallInst* group_buff_idx = CallInst::Create(func_group_buff_idx, "", bb_entry);
-  group_buff_idx->setCallingConv(CallingConv::C);
+  group_buff_idx->setCallingConv(calling_conv);
   group_buff_idx->setTailCall(true);
   Attributes group_buff_idx_pal;
   group_buff_idx->setAttributes(group_buff_idx_pal);
@@ -797,7 +805,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   }
   CallInst* row_process =
       CallInst::Create(func_row_process, row_process_params, "", bb_forbody);
-  row_process->setCallingConv(CallingConv::C);
+  row_process->setCallingConv(calling_conv);
   row_process->setTailCall(true);
   Attributes row_process_pal;
   row_process->setAttributes(row_process_pal);

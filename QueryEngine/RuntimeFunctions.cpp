@@ -955,14 +955,14 @@ extern "C" ALWAYS_INLINE int32_t get_error_code(int32_t* error_codes) {
 
 // group by helpers
 
-extern "C" NEVER_INLINE const int64_t* init_shared_mem_nop(
-    const int64_t* groups_buffer,
+extern "C" NEVER_INLINE const ADDR_SPACE int64_t* init_shared_mem_nop(
+    ADDR_SPACE const int64_t* groups_buffer,
     const int32_t groups_buffer_size) {
   return groups_buffer;
 }
 
-extern "C" NEVER_INLINE void write_back_nop(int64_t* dest,
-                                            int64_t* src,
+extern "C" NEVER_INLINE void write_back_nop(ADDR_SPACE int64_t* dest,
+                                            ADDR_SPACE int64_t* src,
                                             const int32_t sz) {
 #if !defined(_WIN32) && !defined(HAVE_L0)
   // the body is not really needed, just make sure the call is not optimized away
