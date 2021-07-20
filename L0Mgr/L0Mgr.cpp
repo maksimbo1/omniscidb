@@ -83,8 +83,8 @@ L0CommandList::L0CommandList(ze_command_list_handle_t handle) : handle_(handle) 
 
 void L0CommandList::launch(L0Kernel* kernel, std::vector<int8_t*>& params) {
   for (unsigned i = 0; i < params.size(); ++i) {
-    L0_SAFE_CALL(
-        zeKernelSetArgumentValue(kernel->handle(), i, sizeof(params[i]), params[i]));
+    L0_SAFE_CALL(zeKernelSetArgumentValue(
+        kernel->handle(), i, sizeof(params[i]), params[i] ? &params[i] : nullptr));
   }
 
   L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
@@ -122,8 +122,8 @@ void* allocate_device_mem(const size_t num_bytes, L0Device& device) {
   alloc_desc.ordinal = 0;
 
   void* mem;
-  L0_SAFE_CALL(zeMemAllocDevice(
-      device.ctx(), &alloc_desc, num_bytes, 0 /*align*/, device.device(), &mem));
+  L0_SAFE_CALL(
+      zeMemAllocDevice(device.ctx(), &alloc_desc, num_bytes, 64, device.device(), &mem));
   return mem;
 }
 
