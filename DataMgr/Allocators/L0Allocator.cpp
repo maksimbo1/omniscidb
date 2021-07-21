@@ -51,8 +51,9 @@ void L0Allocator::freeGpuAbstractBuffer(Data_Namespace::DataMgr* data_mgr,
 
 int8_t* L0Allocator::alloc(const size_t num_bytes) {
   CHECK(data_mgr_);
-  auto l0_mgr = data_mgr_->getL0Mgr();
-  return l0_mgr->allocateDeviceMem(num_bytes, device_id_);
+  owned_buffers_.emplace_back(
+      L0Allocator::allocGpuAbstractBuffer(data_mgr_, num_bytes, device_id_));
+  return owned_buffers_.back()->getMemoryPtr();
 }
 
 void L0Allocator::free(Data_Namespace::AbstractBuffer* ab) const {

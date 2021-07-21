@@ -268,7 +268,7 @@ void DataMgr::populateMgrs(const SystemParameters& system_parameters,
                                                                     l0Mgr_.get(),
                                                                     minGpuSlabSize,
                                                                     maxGpuSlabSize,
-                                                                    page_size,
+                                                                    4096UL,
                                                                     bufferMgrs_[1][0]));
     }
     levelSizes_.push_back(numGpus);
