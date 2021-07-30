@@ -146,7 +146,7 @@ llvm::Function* row_process(llvm::Module* mod,
 
   if (aggr_col_count) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
-      func_args.push_back(pi64_stack_type);
+      func_args.push_back(pi64_type);
     }
   } else {                                 // group by query
     func_args.push_back(pi64_type);        // groups buffer
@@ -225,6 +225,8 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
                                                   calling_conv,
                                                   addr_space);
   CHECK(func_row_process);
+
+  llvm::errs() << "Row process: " << *func_row_process << "\n";
 
   auto i8_type = IntegerType::get(mod->getContext(), 8);
   auto i32_type = IntegerType::get(mod->getContext(), 32);
@@ -341,12 +343,17 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
 
   // Block  (.entry)
   std::vector<Value*> result_ptr_vec;
+  std::vector<Value*> result_ptr_cast_vec;
   llvm::CallInst* smem_output_buffer{nullptr};
   if (!is_estimate_query) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
       auto result_ptr = new AllocaInst(i64_type, 0, "result", bb_entry);
       result_ptr->setAlignment(LLVM_ALIGN(8));
+
+      auto result_ptr_cast =
+          new AddrSpaceCastInst(result_ptr, pi64_type, "result.cst", bb_entry);
       result_ptr_vec.push_back(result_ptr);
+      result_ptr_cast_vec.push_back(result_ptr_cast);
     }
     if (gpu_smem_context.isSharedMemoryUsed()) {
       auto init_smem_func = mod->getFunction("init_shared_mem");
@@ -380,7 +387,8 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
           get_pointer_element_type(agg_init_gep), agg_init_gep, "", false, bb_entry);
       agg_init_val->setAlignment(LLVM_ALIGN(8));
       agg_init_val_vec.push_back(agg_init_val);
-      auto init_val_st = new StoreInst(agg_init_val, result_ptr_vec[i], false, bb_entry);
+      auto init_val_st =
+          new StoreInst(agg_init_val, result_ptr_cast_vec[i], false, bb_entry);
       init_val_st->setAlignment(LLVM_ALIGN(8));
     }
   }
@@ -423,7 +431,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
 
   std::vector<Value*> row_process_params;
   row_process_params.insert(
-      row_process_params.end(), result_ptr_vec.begin(), result_ptr_vec.end());
+      row_process_params.end(), result_ptr_cast_vec.begin(), result_ptr_cast_vec.end());
   if (is_estimate_query) {
     row_process_params.push_back(
         new LoadInst(get_pointer_element_type(out), out, "", false, bb_forbody));
@@ -453,8 +461,8 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   std::vector<Instruction*> result_vec_pre;
   if (!is_estimate_query) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
-      auto result = new LoadInst(get_pointer_element_type(result_ptr_vec[i]),
-                                 result_ptr_vec[i],
+      auto result = new LoadInst(get_pointer_element_type(result_ptr_cast_vec[i]),
+                                 result_ptr_cast_vec[i],
                                  ".pre.result",
                                  false,
                                  bb_crit_edge);

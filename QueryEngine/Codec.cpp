@@ -23,6 +23,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
+#include <iostream>
+
 FixedWidthInt::FixedWidthInt(const size_t byte_width) : byte_width_{byte_width} {}
 
 llvm::Instruction* FixedWidthInt::codegenDecode(llvm::Value* byte_stream,
@@ -35,7 +37,11 @@ llvm::Instruction* FixedWidthInt::codegenDecode(llvm::Value* byte_stream,
       byte_stream,
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), byte_width_),
       pos};
-  return llvm::CallInst::Create(f, args);
+  // TODO
+  std::cerr << "fixed_width_int_decode calling conv " << f->getCallingConv() << "\n";
+  auto call_inst = llvm::CallInst::Create(f, args);
+  call_inst->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+  return call_inst;
 }
 
 FixedWidthUnsigned::FixedWidthUnsigned(const size_t byte_width)
