@@ -226,8 +226,6 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
                                                   addr_space);
   CHECK(func_row_process);
 
-  llvm::errs() << "Row process: " << *func_row_process << "\n";
-
   auto i8_type = IntegerType::get(mod->getContext(), 8);
   auto i32_type = IntegerType::get(mod->getContext(), 32);
   auto i64_type = IntegerType::get(mod->getContext(), 64);

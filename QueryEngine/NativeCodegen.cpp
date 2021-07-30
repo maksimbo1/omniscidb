@@ -1220,37 +1220,26 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
     }
   }
 
+#ifndef NDEBUG
   {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS("ir_unopt.bc", EC, llvm::sys::fs::F_None);
-    llvm::WriteBitcodeToFile(*module, OS);
-    OS.flush();
-    if (!EC) {
-      llvm::errs() << "Error writing ir_unopt.bc: " << EC.category().name() << '\n';
-    }
-
     llvm::errs() << "PRIOR OPTIMIZATION -----\n";
     llvm::errs() << *module;
     llvm::errs() << "\nPRIOR OPTIMIZATION END -----\n";
   }
+#endif
 
   auto pass_manager_builder = llvm::PassManagerBuilder();
   llvm::legacy::PassManager PM;
   pass_manager_builder.populateModulePassManager(PM);
   optimize_ir(func, module, PM, live_funcs, co);
 
+#ifndef NDEBUG
   {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS("ir.bc", EC, llvm::sys::fs::F_None);
-    llvm::WriteBitcodeToFile(*module, OS);
-    OS.flush();
-    if (!EC) {
-      llvm::errs() << "Error writing ir.bc: " << EC.category().name() << '\n';
-    }
     llvm::errs() << "AFTER OPTIMIZATION -----\n";
     llvm::errs() << *module;
     llvm::errs() << "\nAFTER OPTIMIZATION END -----\n";
   }
+#endif
 
   module->setTargetTriple("spir64-unknown-unknown");
 
@@ -1270,31 +1259,12 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
   opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL12);
   opts.setDebugInfoEIS(SPIRV::DebugInfoEIS::OpenCL_DebugInfo_100);
 
-  // std::unordered_set<llvm::Function*> roots{wrapper_func, func};
-
   // todo: add helper funcs
   // todo: add udf funcs
-
-  // std::vector<llvm::Function*> rt_funcs;
-  // for (auto& Fn : *module) {
-  //   if (!roots.count(&Fn)) {
-  //     rt_funcs.push_back(&Fn);
-  //   }
-  // }
-
-  // for (auto& pFn : rt_funcs) {
-  //   // pFn->removeFromParent();
-  //   pFn->eraseFromParent();
-  // }
-
-  // for (auto& pFn : rt_funcs) {
-  //   module->getFunctionList().push_back(pFn);
-  // }
 
   llvm::errs() << "func: " << (func ? func->getName() : "null") << "\n";
   llvm::errs() << "wrapper func: " << (wrapper_func ? wrapper_func->getName() : "null")
                << "\n";
-  // llvm::errs() << *module;
 
   std::ostringstream ss;
   std::string err;
@@ -1615,15 +1585,14 @@ void bind_pos_placeholders(const std::string& pos_fn_name,
     if (std::string(pos_call.getCalledFunction()->getName()) == pos_fn_name) {
       if (use_resume_param) {
         const auto error_code_arg = get_arg_by_name(query_func, "error_code");
-        auto pos_fn_impl_call_ = llvm::CallInst::Create(
-            module->getFunction(pos_fn_name + "_impl"), error_code_arg);
-        pos_fn_impl_call_->setCallingConv(pos_call.getCalledFunction()->getCallingConv());
-        llvm::ReplaceInstWithInst(&pos_call, pos_fn_impl_call_);
+        llvm::ReplaceInstWithInst(
+            &pos_call,
+            llvm::CallInst::Create(module->getFunction(pos_fn_name + "_impl"),
+                                   error_code_arg));
       } else {
-        auto pos_fn_impl_call_ =
-            llvm::CallInst::Create(module->getFunction(pos_fn_name + "_impl"));
-        pos_fn_impl_call_->setCallingConv(pos_call.getCalledFunction()->getCallingConv());
-        llvm::ReplaceInstWithInst(&pos_call, pos_fn_impl_call_);
+        llvm::ReplaceInstWithInst(
+            &pos_call,
+            llvm::CallInst::Create(module->getFunction(pos_fn_name + "_impl")));
       }
       break;
     }
@@ -1740,11 +1709,6 @@ llvm::Function* create_row_function(const size_t in_col_count,
   // set the row function argument names; for debugging purposes only
   set_row_func_argnames(row_func, in_col_count, agg_col_count, co.hoist_literals);
 
-  auto calling_conv = (co.device_type == ExecutorDeviceType::L0)
-                          ? llvm::CallingConv::SPIR_FUNC
-                          : llvm::CallingConv::C;
-  row_func->setCallingConv(calling_conv);
-  llvm::errs() << "Row func: " << row_func << "\n";
   return row_func;
 }
 
@@ -1762,8 +1726,6 @@ void bind_query(llvm::Function* query_func,
       continue;
     }
     auto& query_call = llvm::cast<llvm::CallInst>(*it);
-    std::cerr << "checking: " << std::string(query_call.getCalledFunction()->getName())
-              << " == " << query_fname << std::endl;
     if (std::string(query_call.getCalledFunction()->getName()) == query_fname) {
       query_stubs.push_back(&query_call);
     }
@@ -1773,11 +1735,7 @@ void bind_query(llvm::Function* query_func,
     for (size_t i = 0; i < S->getNumArgOperands(); ++i) {
       args.push_back(S->getArgOperand(i));
     }
-    auto new_call = llvm::CallInst::Create(query_func, args, "");
-    new_call->setCallingConv(query_func->getCallingConv());
-    std::cerr << "Called func has calling conv: " << query_func->getCallingConv()
-              << std::endl;
-    llvm::ReplaceInstWithInst(S, new_call);
+    llvm::ReplaceInstWithInst(S, llvm::CallInst::Create(query_func, args, ""));
   }
 }
 
@@ -2311,8 +2269,6 @@ std::vector<llvm::Value*> Executor::inlineHoistedLiterals() {
                              llvm::Function::ExternalLinkage,
                              "row_func_hoisted_literals",
                              cgen_state_->row_func_->getParent());
-  row_func_with_hoisted_literals->setCallingConv(
-      cgen_state_->row_func_->getCallingConv());
 
   auto row_func_arg_it = row_func_with_hoisted_literals->arg_begin();
   for (llvm::Function::arg_iterator I = cgen_state_->row_func_->arg_begin(),
@@ -2352,8 +2308,6 @@ std::vector<llvm::Value*> Executor::inlineHoistedLiterals() {
                                llvm::Function::ExternalLinkage,
                                "filter_func_hoisted_literals",
                                cgen_state_->filter_func_->getParent());
-    filter_func_with_hoisted_literals->setCallingConv(
-        row_func_with_hoisted_literals->getCallingConv());
 
     filter_func_arg_it = filter_func_with_hoisted_literals->arg_begin();
     for (llvm::Function::arg_iterator I = cgen_state_->filter_func_->arg_begin(),
@@ -2960,10 +2914,9 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   // push hoisted literals arguments, if any
   row_func_args.insert(
       row_func_args.end(), hoisted_literals.begin(), hoisted_literals.end());
-  auto row_func_call_new_ =
-      llvm::CallInst::Create(cgen_state_->row_func_, row_func_args, "");
-  row_func_call_new_->setCallingConv(cgen_state_->row_func_->getCallingConv());
-  llvm::ReplaceInstWithInst(cgen_state_->row_func_call_, row_func_call_new_);
+  llvm::ReplaceInstWithInst(
+      cgen_state_->row_func_call_,
+      llvm::CallInst::Create(cgen_state_->row_func_, row_func_args, ""));
 
   // replace the filter func placeholder call with the call to the actual filter func
   if (cgen_state_->filter_func_) {
@@ -2973,10 +2926,9 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
          ++arg_it) {
       filter_func_args.push_back(arg_it->first);
     }
-    auto filter_func_call_new_ =
-        llvm::CallInst::Create(cgen_state_->filter_func_, filter_func_args, "");
-    filter_func_call_new_->setCallingConv(cgen_state_->filter_func_->getCallingConv());
-    llvm::ReplaceInstWithInst(cgen_state_->filter_func_call_, filter_func_call_new_);
+    llvm::ReplaceInstWithInst(
+        cgen_state_->filter_func_call_,
+        llvm::CallInst::Create(cgen_state_->filter_func_, filter_func_args, ""));
   }
 
   // Aggregate
@@ -3013,9 +2965,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
       "multifrag_query" + std::string(co.hoist_literals ? "_hoisted_literals" : ""));
   CHECK(multifrag_query_func);
 
-  std::cerr << "multifrag is allowed: " << eo.allow_multifrag << std::endl;
-  std::cerr << serialize_llvm_object(multifrag_query_func) << "\n" << std::endl;
-
   if (((co.device_type == ExecutorDeviceType::GPU) ||
        (co.device_type == ExecutorDeviceType::L0)) &&
       eo.allow_multifrag) {
@@ -3023,9 +2972,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
     insertErrorCodeChecker(
         multifrag_query_func, co.hoist_literals, eo.allow_runtime_query_interrupt);
   }
-
-  std::cerr << "after insert check" << std::endl;
-  std::cerr << serialize_llvm_object(multifrag_query_func) << "\n" << std::endl;
 
   bind_query(query_func,
              "query_stub" + std::string(co.hoist_literals ? "_hoisted_literals" : ""),
@@ -3195,15 +3141,9 @@ void Executor::insertErrorCodeChecker(llvm::Function* query_func,
           llvm::IRBuilder<> interrupt_checker_ir_builder(interrupt_check_bb);
           auto detected_interrupt = interrupt_checker_ir_builder.CreateCall(
               cgen_state_->module_->getFunction("check_interrupt"), {});
-          // detected_interrupt->setCallingConv(
-          //     cgen_state_->module_->getFunction("check_interrupt")->getCallingConv());
-          detected_interrupt->setCallingConv(llvm::CallingConv::SPIR_FUNC);
           auto detected_error = interrupt_checker_ir_builder.CreateCall(
               cgen_state_->module_->getFunction("get_error_code"),
               std::vector<llvm::Value*>{error_code_arg});
-          // detected_error->setCallingConv(
-          //     cgen_state_->module_->getFunction("get_error_code")->getCallingConv());
-          detected_error->setCallingConv(llvm::CallingConv::SPIR_FUNC);
           err_code = interrupt_checker_ir_builder.CreateSelect(
               detected_interrupt,
               cgen_state_->llInt(Executor::ERR_INTERRUPTED),
@@ -3218,10 +3158,6 @@ void Executor::insertErrorCodeChecker(llvm::Function* query_func,
           err_code =
               ir_builder.CreateCall(cgen_state_->module_->getFunction("get_error_code"),
                                     std::vector<llvm::Value*>{error_code_arg});
-          // static_cast<llvm::CallInst*>(err_code)->setCallingConv(
-          //     cgen_state_->module_->getFunction("get_error_code")->getCallingConv());
-          static_cast<llvm::CallInst*>(err_code)->setCallingConv(
-              llvm::CallingConv::SPIR_FUNC);
         }
         err_lv = ir_builder.CreateICmp(
             llvm::ICmpInst::ICMP_NE, err_code, cgen_state_->llInt(0));
@@ -3232,10 +3168,6 @@ void Executor::insertErrorCodeChecker(llvm::Function* query_func,
                                    std::vector<llvm::Value*>{err_code, error_code_arg},
                                    "",
                                    error_bb);
-        // record_error_code_call_->setCallingConv(
-        //     cgen_state_->module_->getFunction("record_error_code")->getCallingConv());
-
-        record_error_code_call_->setCallingConv(llvm::CallingConv::SPIR_FUNC);
         llvm::ReturnInst::Create(cgen_state_->context_, error_bb);
         llvm::ReplaceInstWithInst(&br_instr,
                                   llvm::BranchInst::Create(error_bb, new_bb, err_lv));

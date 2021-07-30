@@ -180,11 +180,7 @@ llvm::Value* CgenState::emitCall(const std::string& fname,
   // module.
   maybeCloneFunctionRecursive(func);
 
-  // TODO
-  auto call_inst = ir_builder_.CreateCall(func, args);
-  call_inst->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-
-  return call_inst;
+  return ir_builder_.CreateCall(func, args);
 }
 
 void CgenState::emitErrorCheck(llvm::Value* condition,
