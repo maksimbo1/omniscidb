@@ -1379,7 +1379,8 @@ extern "C" void multifrag_query_hoisted_literals(
     GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
   for (uint32_t i = 0; i < *num_fragments; ++i) {
     query_stub_hoisted_literals(
-        col_buffers ? (const int8_t ADDR_SPACE* ADDR_SPACE*)((col_buffers)[i]) : nullptr,
+        col_buffers ? ((const int8_t ADDR_SPACE* ADDR_SPACE* ADDR_SPACE*)col_buffers)[i]
+                    : nullptr,
         literals,
         &num_rows[i * (*num_tables_ptr)],
         &frag_row_offsets[i * (*num_tables_ptr)],
