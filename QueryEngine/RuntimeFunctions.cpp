@@ -515,7 +515,7 @@ extern "C" ALWAYS_INLINE int32_t agg_sum_int32_skip_val(int32_t* agg,
   return old;
 }
 
-extern "C" ALWAYS_INLINE uint64_t agg_count_skip_val(uint64_t* agg,
+extern "C" ALWAYS_INLINE uint64_t agg_count_skip_val(ADDR_SPACE uint64_t* agg,
                                                      const int64_t val,
                                                      const int64_t skip_val) {
   if (val != skip_val) {
@@ -937,7 +937,7 @@ extern "C" GPU_RT_STUB int64_t get_block_index() {
 #undef GPU_RT_STUB
 
 extern "C" ALWAYS_INLINE void record_error_code(const int32_t err_code,
-                                                GLOBAL_ADDR_SPACE int32_t* error_codes) {
+                                                ADDR_SPACE int32_t* error_codes) {
   // NB: never override persistent error codes (with code greater than zero).
   // On GPU, a projection query with a limit can run out of slots without it
   // being an actual error if the limit has been hit. If a persistent error
@@ -1379,7 +1379,7 @@ extern "C" void multifrag_query_hoisted_literals(
     GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
   for (uint32_t i = 0; i < *num_fragments; ++i) {
     query_stub_hoisted_literals(
-        (const int8_t ADDR_SPACE* ADDR_SPACE*)(col_buffers),  // fixme
+        col_buffers ? (const int8_t ADDR_SPACE* ADDR_SPACE*)((col_buffers)[i]) : nullptr,
         literals,
         &num_rows[i * (*num_tables_ptr)],
         &frag_row_offsets[i * (*num_tables_ptr)],

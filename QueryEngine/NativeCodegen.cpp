@@ -85,6 +85,10 @@ extern std::unique_ptr<llvm::Module> g_rt_module;
 extern std::unique_ptr<llvm::Module> g_rt_libdevice_module;
 #endif
 
+#ifdef HAVE_L0
+extern std::unique_ptr<llvm::Module> g_rt_l0_module;
+#endif
+
 #ifdef ENABLE_GEOS
 extern std::unique_ptr<llvm::Module> g_rt_geos_module;
 
@@ -1307,6 +1311,10 @@ std::shared_ptr<CompilationContext> Executor::optimizeAndCodegenL0(
   CHECK(l0_mgr);
   // todo: cache
 
+  // override rt functions
+  CodeGenerator::link_udf_module(
+      g_rt_l0_module, *module, cgen_state_.get(), llvm::Linker::Flags::OverrideFromSrc);
+
   std::shared_ptr<L0CompilationContext> compilation_context;
   try {
     compilation_context = CodeGenerator::generateNativeL0Code(
@@ -1522,6 +1530,24 @@ llvm::Module* read_template_module(llvm::LLVMContext& context) {
 
   return module;
 }
+
+#ifdef HAVE_L0
+llvm::Module* read_l0_rt_module(llvm::LLVMContext& context) {
+  llvm::SMDiagnostic err;
+
+  auto buffer_or_error = llvm::MemoryBuffer::getFile(omnisci::get_root_abs_path() +
+                                                     "/QueryEngine/l0_mapd_rt.bc");
+  CHECK(!buffer_or_error.getError()) << "root path=" << omnisci::get_root_abs_path();
+  llvm::MemoryBuffer* buffer = buffer_or_error.get().get();
+
+  auto owner = llvm::parseBitcodeFile(buffer->getMemBufferRef(), context);
+  CHECK(!owner.takeError());
+  auto module = owner.get().release();
+  CHECK(module);
+
+  return module;
+}
+#endif
 
 #ifdef HAVE_CUDA
 llvm::Module* read_libdevice_module(llvm::LLVMContext& context) {
@@ -1851,6 +1877,10 @@ std::unique_ptr<llvm::Module> g_rt_geos_module(read_geos_module(getGlobalLLVMCon
 #ifdef HAVE_CUDA
 std::unique_ptr<llvm::Module> g_rt_libdevice_module(
     read_libdevice_module(getGlobalLLVMContext()));
+#endif
+
+#ifdef HAVE_L0
+std::unique_ptr<llvm::Module> g_rt_l0_module(read_l0_rt_module(getGlobalLLVMContext()));
 #endif
 
 bool is_udf_module_present(bool cpu_only) {
@@ -2969,8 +2999,7 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
        (co.device_type == ExecutorDeviceType::L0)) &&
       eo.allow_multifrag) {
     std::cerr << "inserting errors" << std::endl;
-    insertErrorCodeChecker(
-        multifrag_query_func, co.hoist_literals, eo.allow_runtime_query_interrupt);
+    insertErrorCodeChecker(multifrag_query_func, co, eo.allow_runtime_query_interrupt);
   }
 
   bind_query(query_func,
@@ -3093,10 +3122,10 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
 }
 
 void Executor::insertErrorCodeChecker(llvm::Function* query_func,
-                                      bool hoist_literals,
+                                      const CompilationOptions& co,
                                       bool allow_runtime_query_interrupt) {
   auto query_stub_func_name =
-      "query_stub" + std::string(hoist_literals ? "_hoisted_literals" : "");
+      "query_stub" + std::string(co.hoist_literals ? "_hoisted_literals" : "");
   for (auto bb_it = query_func->begin(); bb_it != query_func->end(); ++bb_it) {
     for (auto inst_it = bb_it->begin(); inst_it != bb_it->end(); ++inst_it) {
       if (!llvm::isa<llvm::CallInst>(*inst_it)) {
@@ -3119,7 +3148,7 @@ void Executor::insertErrorCodeChecker(llvm::Function* query_func,
              arg_it++, ++arg_cnt) {
           // since multi_frag_* func has anonymous arguments so we use arg_offset
           // explicitly to capture "error_code" argument in the func's argument list
-          if (hoist_literals) {
+          if (co.hoist_literals) {
             if (arg_cnt == 9) {
               error_code_arg = &*arg_it;
               break;
@@ -3163,11 +3192,16 @@ void Executor::insertErrorCodeChecker(llvm::Function* query_func,
             llvm::ICmpInst::ICMP_NE, err_code, cgen_state_->llInt(0));
         auto error_bb = llvm::BasicBlock::Create(
             cgen_state_->context_, ".error_exit", query_func, new_bb);
-        auto record_error_code_call_ =
-            llvm::CallInst::Create(cgen_state_->module_->getFunction("record_error_code"),
-                                   std::vector<llvm::Value*>{err_code, error_code_arg},
-                                   "",
-                                   error_bb);
+        unsigned int AS = (co.device_type == ExecutorDeviceType::L0) ? 4 : 0;
+        auto i32_type = llvm::IntegerType::get(cgen_state_->module_->getContext(), 32);
+        auto pi32_ty = llvm::PointerType::get(i32_type, AS);
+        auto error_code_cast_arg =
+            ir_builder.CreateAddrSpaceCast(error_code_arg, pi32_ty);
+        auto record_error_code_call_ = llvm::CallInst::Create(
+            cgen_state_->module_->getFunction("record_error_code"),
+            std::vector<llvm::Value*>{err_code, error_code_cast_arg},
+            "",
+            error_bb);
         llvm::ReturnInst::Create(cgen_state_->context_, error_bb);
         llvm::ReplaceInstWithInst(&br_instr,
                                   llvm::BranchInst::Create(error_bb, new_bb, err_lv));

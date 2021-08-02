@@ -196,6 +196,7 @@ class L0Kernel : public DeviceKernel {
 
     auto q = device->command_queue();
     auto q_list = device->create_command_list();
+    kernel->group_size() = {gridDimX, gridDimY, gridDimZ};
     q_list->launch(kernel, kernelParams);
     q_list->submit(*q.get());
   }

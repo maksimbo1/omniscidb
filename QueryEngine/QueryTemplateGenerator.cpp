@@ -141,19 +141,17 @@ llvm::Function* row_process(llvm::Module* mod,
   auto i64_type = IntegerType::get(mod->getContext(), 64);
   auto pi32_type = PointerType::get(i32_type, AS);
   auto pi64_type = PointerType::get(i64_type, AS);
-  auto pi32_stack_type = PointerType::get(i32_type, 0);
-  auto pi64_stack_type = PointerType::get(i64_type, 0);
 
   if (aggr_col_count) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
       func_args.push_back(pi64_type);
     }
-  } else {                                 // group by query
-    func_args.push_back(pi64_type);        // groups buffer
-    func_args.push_back(pi32_stack_type);  // 1 iff current row matched, else 0
-    func_args.push_back(pi32_type);        // total rows matched from the caller
-    func_args.push_back(pi32_stack_type);  // total rows matched before atomic increment
-    func_args.push_back(pi32_type);        // max number of slots in the output buffer
+  } else {                           // group by query
+    func_args.push_back(pi64_type);  // groups buffer
+    func_args.push_back(pi32_type);  // 1 iff current row matched, else 0
+    func_args.push_back(pi32_type);  // total rows matched from the caller
+    func_args.push_back(pi32_type);  // total rows matched before atomic increment
+    func_args.push_back(pi32_type);  // max number of slots in the output buffer
   }
 
   func_args.push_back(pi64_type);  // aggregate init values
@@ -340,7 +338,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   auto bb_exit = BasicBlock::Create(mod->getContext(), ".exit", query_func_ptr, 0);
 
   // Block  (.entry)
-  std::vector<Value*> result_ptr_vec;
+  std::vector<Value*> result_ptr_vec;  // todo: remove
   std::vector<Value*> result_ptr_cast_vec;
   llvm::CallInst* smem_output_buffer{nullptr};
   if (!is_estimate_query) {
@@ -737,7 +735,11 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   max_matched->setAlignment(LLVM_ALIGN(8));
 
   auto crt_matched_ptr = new AllocaInst(i32_type, 0, "crt_matched", bb_entry);
+  auto crt_matched_cast_ptr =
+      new AddrSpaceCastInst(crt_matched_ptr, pi32_type, "crt_matched.cst", bb_entry);
   auto old_total_matched_ptr = new AllocaInst(i32_type, 0, "old_total_matched", bb_entry);
+  auto old_total_matched_cast_ptr = new AddrSpaceCastInst(
+      old_total_matched_ptr, pi32_type, "old_total_matched.cst", bb_entry);
   CallInst* pos_start = CallInst::Create(func_pos_start, "", bb_entry);
   pos_start->setCallingConv(calling_conv);
   pos_start->setTailCall(true);
@@ -792,9 +794,9 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
 
   std::vector<Value*> row_process_params;
   row_process_params.push_back(result_buffer);
-  row_process_params.push_back(crt_matched_ptr);
+  row_process_params.push_back(crt_matched_cast_ptr);
   row_process_params.push_back(total_matched);
-  row_process_params.push_back(old_total_matched_ptr);
+  row_process_params.push_back(old_total_matched_cast_ptr);
   row_process_params.push_back(max_matched_ptr);
   row_process_params.push_back(agg_init_val);
   row_process_params.push_back(pos);
@@ -806,7 +808,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   }
   if (check_scan_limit) {
     new StoreInst(ConstantInt::get(IntegerType::get(mod->getContext(), 32), 0),
-                  crt_matched_ptr,
+                  crt_matched_cast_ptr,
                   bb_forbody);
   }
   CallInst* row_process =
@@ -831,16 +833,16 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   ICmpInst* loop_or_exit =
       new ICmpInst(*bb_forbody, ICmpInst::ICMP_SLT, pos_inc, row_count, "");
   if (check_scan_limit) {
-    auto crt_matched = new LoadInst(get_pointer_element_type(crt_matched_ptr),
-                                    crt_matched_ptr,
+    auto crt_matched = new LoadInst(get_pointer_element_type(crt_matched_cast_ptr),
+                                    crt_matched_cast_ptr,
                                     "crt_matched",
                                     false,
                                     bb_forbody);
     auto filter_match = BasicBlock::Create(
         mod->getContext(), "filter_match", query_func_ptr, bb_crit_edge);
     llvm::Value* new_total_matched =
-        new LoadInst(get_pointer_element_type(old_total_matched_ptr),
-                     old_total_matched_ptr,
+        new LoadInst(get_pointer_element_type(old_total_matched_cast_ptr),
+                     old_total_matched_cast_ptr,
                      "",
                      false,
                      filter_match);
