@@ -189,7 +189,7 @@ std::shared_ptr<L0Module> L0Device::create_module(uint8_t* code,
       .format = ZE_MODULE_FORMAT_IL_SPIRV,
       .inputSize = len,
       .pInputModule = code,
-      .pBuildFlags = "",
+      .pBuildFlags = "-ze-opt-greater-than-4GB-buffer-required",
       .pConstants = nullptr,
   };
   ze_module_handle_t handle;
@@ -275,8 +275,8 @@ L0Kernel::~L0Kernel() {
   }
 }
 
-void L0Manager::copyHostToDevice(void* device_ptr,
-                                 const void* host_ptr,
+void L0Manager::copyHostToDevice(int8_t* device_ptr,
+                                 const int8_t* host_ptr,
                                  const size_t num_bytes,
                                  const int device_num) {
   auto& device = drivers()[0]->devices()[device_num];
@@ -287,8 +287,8 @@ void L0Manager::copyHostToDevice(void* device_ptr,
   cl->submit(*queue);
 }
 
-void L0Manager::copyDeviceToHost(void* host_ptr,
-                                 const void* device_ptr,
+void L0Manager::copyDeviceToHost(int8_t* host_ptr,
+                                 const int8_t* device_ptr,
                                  const size_t num_bytes,
                                  const int device_num) {
   auto& device = drivers_[0]->devices()[device_num];
@@ -299,8 +299,8 @@ void L0Manager::copyDeviceToHost(void* host_ptr,
   cl->submit(*queue);
 }
 
-void L0Manager::copyDeviceToDevice(void* dest_ptr,
-                                   void* src_ptr,
+void L0Manager::copyDeviceToDevice(int8_t* dest_ptr,
+                                   int8_t* src_ptr,
                                    const size_t num_bytes,
                                    const int dest_device_num,
                                    const int src_device_num) {

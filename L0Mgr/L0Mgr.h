@@ -19,6 +19,7 @@
 #include <memory>
 #include <vector>
 
+#include "DataMgr/GpuMgr.h"
 #include "L0Mgr/L0Exception.h"
 #include "L0Mgr/Utils.h"
 
@@ -175,23 +176,23 @@ class L0CommandList {
 
 void* allocate_device_mem(const size_t num_bytes, L0Device& device);
 
-class L0Manager {
+class L0Manager : public GpuMgr {
  public:
   L0Manager();
 
-  void copyHostToDevice(void* device_ptr,
-                        const void* host_ptr,
+  void copyHostToDevice(int8_t* device_ptr,
+                        const int8_t* host_ptr,
                         const size_t num_bytes,
-                        const int device_num);
-  void copyDeviceToHost(void* host_ptr,
-                        const void* device_ptr,
+                        const int device_num) override;
+  void copyDeviceToHost(int8_t* host_ptr,
+                        const int8_t* device_ptr,
                         const size_t num_bytes,
-                        const int device_num);
-  void copyDeviceToDevice(void* dest_ptr,
-                          void* src_ptr,
+                        const int device_num) override;
+  void copyDeviceToDevice(int8_t* dest_ptr,
+                          int8_t* src_ptr,
                           const size_t num_bytes,
                           const int dest_device_num,
-                          const int src_device_num);
+                          const int src_device_num) override;
 
   int8_t* allocatePinnedHostMem(const size_t num_bytes);
   int8_t* allocateDeviceMem(const size_t num_bytes, const int device_num);
