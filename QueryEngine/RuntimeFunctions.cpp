@@ -1336,6 +1336,21 @@ extern "C" NEVER_INLINE __attribute__((optnone)) void query_stub_hoisted_literal
 #endif
 }
 
+extern "C" NEVER_INLINE void my_test_func(
+    const int8_t ADDR_SPACE* ADDR_SPACE* col_buffers,
+    ADDR_SPACE const int8_t* literals,
+    ADDR_SPACE const int64_t* num_rows,
+    ADDR_SPACE const uint64_t* frag_row_offsets,
+    ADDR_SPACE const int32_t* max_matched,
+    ADDR_SPACE const int64_t* init_agg_value,
+    ADDR_SPACE int64_t* ADDR_SPACE* out,
+    uint32_t frag_idx,
+    ADDR_SPACE const int64_t* join_hash_tables,
+    ADDR_SPACE int32_t* error_code,
+    ADDR_SPACE int32_t* total_matched) {
+  out[0][pos_start_impl(nullptr)] = 42;
+}
+
 #ifndef HAVE_L0
 extern "C" void multifrag_query_hoisted_literals(const int8_t*** col_buffers,
                                                  const uint64_t* num_fragments,
@@ -1378,7 +1393,7 @@ extern "C" void multifrag_query_hoisted_literals(
     GLOBAL_ADDR_SPACE const uint32_t* num_tables_ptr,
     GLOBAL_ADDR_SPACE const int64_t* join_hash_tables) {
   for (uint32_t i = 0; i < *num_fragments; ++i) {
-    query_stub_hoisted_literals(
+    my_test_func(
         col_buffers ? (const int8_t ADDR_SPACE* ADDR_SPACE*)((col_buffers)[i]) : nullptr,
         literals,
         &num_rows[i * (*num_tables_ptr)],
