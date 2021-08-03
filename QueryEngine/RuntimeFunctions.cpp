@@ -1348,7 +1348,12 @@ extern "C" NEVER_INLINE void my_test_func(
     ADDR_SPACE const int64_t* join_hash_tables,
     ADDR_SPACE int32_t* error_code,
     ADDR_SPACE int32_t* total_matched) {
-  out[0][pos_start_impl(nullptr)] = 42;
+  int64_t result = 0;
+  ADDR_SPACE int64_t* buf = (ADDR_SPACE int64_t*)(col_buffers[0]);
+  for (int i = 0; i < num_rows[0]; i++) {
+    result += buf[i];
+  }
+  out[0][0] = buf[1];
 }
 
 #ifndef HAVE_L0
