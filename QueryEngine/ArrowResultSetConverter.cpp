@@ -461,7 +461,7 @@ ArrowResult ArrowResultSetConverter::getArrowResult() const {
     }
   }
 #ifdef HAVE_CUDA
-  CHECK(device_type_ == ExecutorDeviceType::GPU);
+  CHECK(device_type_ == ExecutorDeviceType::CUDA);
 
   // Copy the schema to the schema handle
   auto out_stream_result = arrow::io::BufferOutputStream::Create(1024);
@@ -701,7 +701,7 @@ std::shared_ptr<arrow::RecordBatch> ArrowResultSetConverter::getArrowBatch(
                 *scalar_value, column.col_type, null_bitmap_seg[j], entry_count);
             break;
           case kDATE:
-            device_type_ == ExecutorDeviceType::GPU
+            device_type_ == ExecutorDeviceType::CUDA
                 ? create_or_append_value<int64_t, int64_t>(
                       *scalar_value, value_seg[j], entry_count)
                 : create_or_append_value<int32_t, int64_t>(
@@ -940,7 +940,7 @@ std::shared_ptr<arrow::DataType> get_arrow_type(const SQLTypeInfo& sql_type,
       // TODO(wamsi) : Remove date64() once date32() support is added in cuDF. date32()
       // Currently support for date32() is missing in cuDF.Hence, if client requests for
       // date on GPU, return date64() for the time being, till support is added.
-      if (device_type == ExecutorDeviceType::GPU) {
+      if (device_type == ExecutorDeviceType::CUDA) {
         return arrow::date64();
       } else {
         return arrow::date32();
@@ -1201,7 +1201,7 @@ void ArrowResultSetConverter::append(
           column_builder, values, is_valid);
       break;
     case kDATE:
-      device_type_ == ExecutorDeviceType::GPU
+      device_type_ == ExecutorDeviceType::CUDA
           ? appendToColumnBuilder<arrow::Date64Builder, int64_t>(
                 column_builder, values, is_valid)
           : appendToColumnBuilder<arrow::Date32Builder, int32_t>(

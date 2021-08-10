@@ -151,7 +151,7 @@ TEST(CodeGeneratorTest, IntegerConstantGPU) {
   auto& ctx = getGlobalLLVMContext();
   std::unique_ptr<llvm::Module> module(read_template_module(ctx));
   ScalarCodeGenerator code_generator(std::move(module));
-  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::GPU);
+  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::CUDA);
   co.hoist_literals = false;
 
   Datum d;
@@ -197,7 +197,7 @@ TEST(CodeGeneratorTest, IntegerAddGPU) {
   auto& ctx = getGlobalLLVMContext();
   std::unique_ptr<llvm::Module> module(read_template_module(ctx));
   ScalarCodeGenerator code_generator(std::move(module));
-  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::GPU);
+  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::CUDA);
   co.hoist_literals = false;
 
   Datum d;
@@ -245,7 +245,7 @@ TEST(CodeGeneratorTest, IntegerColumnGPU) {
   auto& ctx = getGlobalLLVMContext();
   std::unique_ptr<llvm::Module> module(read_template_module(ctx));
   ScalarCodeGenerator code_generator(std::move(module));
-  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::GPU);
+  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::CUDA);
   co.hoist_literals = false;
 
   SQLTypeInfo ti(kINT, false);
@@ -303,7 +303,7 @@ TEST(CodeGeneratorTest, IntegerExprGPU) {
   auto& ctx = getGlobalLLVMContext();
   std::unique_ptr<llvm::Module> module(read_template_module(ctx));
   ScalarCodeGenerator code_generator(std::move(module));
-  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::GPU);
+  CompilationOptions co = CompilationOptions::defaults(ExecutorDeviceType::CUDA);
   co.hoist_literals = false;
 
   SQLTypeInfo ti(kINT, false);

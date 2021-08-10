@@ -80,7 +80,7 @@ std::vector<int8_t> pick_top_n_rows_from_dev_heaps(
       data_mgr,
       dev_heaps_buffer,
       query_mem_desc.getBufferSizeBytes(
-          ra_exe_unit, thread_count, ExecutorDeviceType::GPU),
+          ra_exe_unit, thread_count, ExecutorDeviceType::CUDA),
       n,
       pod_oe,
       oe_layout,

@@ -3585,16 +3585,16 @@ class CtasTableTest : public DBHandlerTestFixture,
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  // return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
-  return device_type == ExecutorDeviceType::GPU;
+  // return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA;
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -3606,7 +3606,7 @@ TEST_F(CtasTableTest, CreateTableAsSelect) {
   createTestTable();
 
   // XYZZY once for GPU, once for CPU
-  // for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  // for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
   //    SKIP_NO_GPU(); /// uses "dt"
 
   int err{0};

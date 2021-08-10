@@ -212,7 +212,7 @@ llvm::Value* CodeGenerator::codegenCastFromString(llvm::Value* operand_lv,
     CHECK_EQ(kENCODING_NONE, operand_ti.get_compression());
     CHECK_EQ(kENCODING_DICT, ti.get_compression());
     CHECK(operand_lv->getType()->isIntegerTy(64));
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       throw QueryMustRunOnCpu();
     }
     return cgen_state_->emitExternalCall(
@@ -234,7 +234,7 @@ llvm::Value* CodeGenerator::codegenCastFromString(llvm::Value* operand_lv,
           "Cast from dictionary-encoded string to none-encoded would be slow");
     }
     CHECK_EQ(kENCODING_DICT, operand_ti.get_compression());
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       throw QueryMustRunOnCpu();
     }
     const int64_t string_dictionary_ptr =

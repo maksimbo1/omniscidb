@@ -31,7 +31,7 @@ std::vector<uint32_t> do_radix_sort(const ExecutorDeviceType device_type,
     return {};
   }
   if (oe.is_desc) {
-    if (device_type == ExecutorDeviceType::GPU) {
+    if (device_type == ExecutorDeviceType::CUDA) {
       thrust::sort_by_key(thrust::device(thrust_allocator),
                           dev_oe_col_buffer_begin,
                           dev_oe_col_buffer_end,
@@ -44,7 +44,7 @@ std::vector<uint32_t> do_radix_sort(const ExecutorDeviceType device_type,
                           thrust::greater<int64_t>());
     }
   } else {
-    if (device_type == ExecutorDeviceType::GPU) {
+    if (device_type == ExecutorDeviceType::CUDA) {
       thrust::sort_by_key(thrust::device(thrust_allocator),
                           dev_oe_col_buffer_begin,
                           dev_oe_col_buffer_end,
@@ -165,7 +165,7 @@ std::vector<uint32_t> baseline_sort_fp(const ExecutorDeviceType device_type,
   }
   std::vector<uint32_t> pos_result;
   ThrustAllocator thrust_allocator(data_mgr, device_id);
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     const auto dev_pos_idx_buff = get_device_copy_ptr(pos_idx_buff, thrust_allocator);
     const auto dev_pos_oe_col_buffer =
         get_device_copy_ptr(pos_oe_col_buffer, thrust_allocator);
@@ -194,7 +194,7 @@ std::vector<uint32_t> baseline_sort_fp(const ExecutorDeviceType device_type,
   }
   std::vector<uint32_t> neg_result;
   PodOrderEntry reverse_oe{oe.tle_no, !oe.is_desc, oe.nulls_first};
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     const auto dev_neg_idx_buff = get_device_copy_ptr(neg_idx_buff, thrust_allocator);
     const auto dev_neg_oe_col_buffer =
         get_device_copy_ptr(neg_oe_col_buffer, thrust_allocator);
@@ -263,7 +263,7 @@ std::vector<uint32_t> baseline_sort_int(const ExecutorDeviceType device_type,
   }
   std::vector<uint32_t> notnull_result;
   ThrustAllocator thrust_allocator(data_mgr, device_id);
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     const auto dev_notnull_idx_buff =
         get_device_copy_ptr(notnull_idx_buff, thrust_allocator);
     const auto dev_notnull_oe_col_buffer =
@@ -375,7 +375,7 @@ std::vector<uint32_t> baseline_sort(const ExecutorDeviceType device_type,
   ThrustAllocator thrust_allocator(data_mgr, device_id);
   // Fastest path, no need to separate nulls away since they'll end up at the
   // right place as a side effect of how we're representing nulls.
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     if (oe_col_buffer.empty()) {
       return {};
     }

@@ -143,7 +143,7 @@ std::string BaselineJoinHashTable::toString(const ExecutorDeviceType device_type
   auto buffer_size = hash_table->getHashTableBufferSize(device_type);
 #ifdef HAVE_CUDA
   std::unique_ptr<int8_t[]> buffer_copy;
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     buffer_copy = std::make_unique<int8_t[]>(buffer_size);
 
     auto& data_mgr = catalog_->getDataMgr();
@@ -182,7 +182,7 @@ std::set<DecodedJoinHashBufferEntry> BaselineJoinHashTable::toSet(
   auto buffer_size = hash_table->getHashTableBufferSize(device_type);
 #ifdef HAVE_CUDA
   std::unique_ptr<int8_t[]> buffer_copy;
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     buffer_copy = std::make_unique<int8_t[]>(buffer_size);
     auto& data_mgr = catalog_->getDataMgr();
     auto device_allocator = data_mgr.createGpuAllocator(device_id);
@@ -330,7 +330,7 @@ std::pair<size_t, size_t> BaselineJoinHashTable::approximateTupleCount(
       11,
       true,
       effective_memory_level == Data_Namespace::MemoryLevel::GPU_LEVEL
-          ? ExecutorDeviceType::GPU
+          ? ExecutorDeviceType::CUDA
           : ExecutorDeviceType::CPU,
       1};
   const auto padded_size_bytes = count_distinct_desc.bitmapPaddedSizeBytes();

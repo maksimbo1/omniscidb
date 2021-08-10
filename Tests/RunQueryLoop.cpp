@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   std::string query;
   size_t iter;
 
-  ExecutorDeviceType device_type{ExecutorDeviceType::GPU};
+  ExecutorDeviceType device_type{ExecutorDeviceType::CUDA};
 
   boost::program_options::options_description desc("Options");
   desc.add_options()("path",

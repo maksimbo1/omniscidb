@@ -51,7 +51,7 @@ struct CountDistinctDescriptor {
   size_t bitmapSizeBytes() const {
     CHECK(impl_type_ == CountDistinctImplType::Bitmap);
     const auto approx_reg_bytes =
-        (device_type == ExecutorDeviceType::GPU ? sizeof(int32_t) : 1);
+        (device_type == ExecutorDeviceType::CUDA ? sizeof(int32_t) : 1);
     return approximate ? (1 << bitmap_sz_bits) * approx_reg_bytes
                        : bitmap_bits_to_bytes(bitmap_sz_bits);
   }
@@ -59,7 +59,7 @@ struct CountDistinctDescriptor {
   size_t bitmapPaddedSizeBytes() const {
     const auto effective_size = bitmapSizeBytes();
     const auto padded_size =
-        (device_type == ExecutorDeviceType::GPU || sub_bitmap_count > 1)
+        (device_type == ExecutorDeviceType::CUDA || sub_bitmap_count > 1)
             ? align_to_int64(effective_size)
             : effective_size;
     return padded_size * sub_bitmap_count;

@@ -45,7 +45,7 @@ using QR = QueryRunner::QueryRunner;
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -93,9 +93,9 @@ std::string get_udf_ast_filename() {
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !QR::get()->gpusPresent();
+  return device_type == ExecutorDeviceType::CUDA && !QR::get()->gpusPresent();
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
@@ -322,7 +322,7 @@ TEST_F(UDFCompilerTest, UdfQuery) {
       "(0.2 0, 0 0.2, -0.2 0, 0 -0.2, 0.2 0)))');");
   EXPECT_NO_THROW(run_multiple_agg(multipolygon_insert1, ExecutorDeviceType::CPU));
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
     ASSERT_EQ(7,
               v<int64_t>(run_simple_agg("SELECT udf_range_int(high_p, low_p) from stocks "

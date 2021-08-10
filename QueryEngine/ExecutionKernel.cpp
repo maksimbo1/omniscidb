@@ -122,8 +122,7 @@ void ExecutionKernel::runImpl(Executor* executor,
                               const size_t thread_idx,
                               SharedKernelContext& shared_context) {
   CHECK(executor);
-  const auto memory_level = (chosen_device_type == ExecutorDeviceType::GPU ||
-                             chosen_device_type == ExecutorDeviceType::L0)
+  const auto memory_level = is_gpu(chosen_device_type)
                                 ? Data_Namespace::GPU_LEVEL
                                 : Data_Namespace::CPU_LEVEL;
   CHECK_GE(frag_list.size(), size_t(1));
@@ -145,7 +144,7 @@ void ExecutionKernel::runImpl(Executor* executor,
   std::list<std::shared_ptr<Chunk_NS::Chunk>> chunks;
   std::unique_ptr<std::lock_guard<std::mutex>> gpu_lock;
   std::unique_ptr<DeviceAllocator> device_allocator;
-  if (chosen_device_type == ExecutorDeviceType::GPU) {
+  if (chosen_device_type == ExecutorDeviceType::CUDA) {
     gpu_lock.reset(
         new std::lock_guard<std::mutex>(executor->gpu_exec_mutex_[chosen_device_id]));
     device_allocator =

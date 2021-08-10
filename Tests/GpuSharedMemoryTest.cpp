@@ -110,7 +110,7 @@ void GpuReductionTester::codegenWrapperKernel() {
                                    llvm::Type::getInt64PtrTy(context_, address_space),
                                    "input_buffer_ptr");
   const auto buffer_size = ll_int(
-      static_cast<int32_t>(query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::GPU)),
+      static_cast<int32_t>(query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::CUDA)),
       context_);
 
   // initializing shared memory and copy input buffer into shared memory buffer:
@@ -237,7 +237,7 @@ create_and_init_output_result_sets(std::shared_ptr<RowSetMemoryOwner> row_set_me
 
   // GPU result set, will eventually host GPU reduction results
   auto gpu_result_set = std::make_unique<ResultSet>(target_infos,
-                                                    ExecutorDeviceType::GPU,
+                                                    ExecutorDeviceType::CUDA,
                                                     query_mem_desc,
                                                     row_set_mem_owner,
                                                     nullptr,
@@ -368,7 +368,7 @@ void perform_test_and_verify_results(TestInputData input) {
   const auto cmp_result =
       std::memcmp(cpu_result_set->getStorage()->getUnderlyingBuffer(),
                   gpu_result_set->getStorage()->getUnderlyingBuffer(),
-                  query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::GPU));
+                  query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::CUDA));
   ASSERT_EQ(cmp_result, 0);
 }
 
@@ -389,7 +389,7 @@ void GpuReductionTester::performReductionTest(
   std::unique_ptr<GpuDeviceCompilationContext> gpu_context(compile_and_link_gpu_code(
       module_str, module_, cuda_mgr_, getWrapperKernel()->getName().str()));
 
-  const auto buffer_size = query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::GPU);
+  const auto buffer_size = query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::CUDA);
   const size_t num_buffers = result_sets.size();
   std::vector<int8_t*> d_input_buffers;
   for (size_t i = 0; i < num_buffers; i++) {

@@ -93,7 +93,7 @@ GpuGroupByBuffers create_dev_group_by_buffers(
       CHECK_GT(num_input_rows, int64_t(0));
       entry_count = num_input_rows;
       groups_buffer_size =
-          query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::GPU, entry_count);
+          query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::CUDA, entry_count);
       mem_size = coalesced_size(query_mem_desc,
                                 groups_buffer_size,
                                 query_mem_desc.blocksShareMemory() ? 1 : grid_size_x);
@@ -108,7 +108,7 @@ GpuGroupByBuffers create_dev_group_by_buffers(
       while (true) {
         entry_count = max_memory_size / query_mem_desc.getRowSize();
         groups_buffer_size =
-            query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::GPU, entry_count);
+            query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::CUDA, entry_count);
 
         try {
           mem_size = coalesced_size(query_mem_desc,
@@ -139,7 +139,7 @@ GpuGroupByBuffers create_dev_group_by_buffers(
     entry_count = query_mem_desc.getEntryCount();
     CHECK_GT(entry_count, size_t(0));
     groups_buffer_size =
-        query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::GPU, entry_count);
+        query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::CUDA, entry_count);
     mem_size = coalesced_size(query_mem_desc,
                               groups_buffer_size,
                               query_mem_desc.blocksShareMemory() ? 1 : grid_size_x);
@@ -165,7 +165,7 @@ GpuGroupByBuffers create_dev_group_by_buffers(
   const size_t step{block_size_x};
 
   if (!insitu_allocator && (always_init_group_by_on_host ||
-                            !query_mem_desc.lazyInitGroups(ExecutorDeviceType::GPU))) {
+                            !query_mem_desc.lazyInitGroups(ExecutorDeviceType::CUDA))) {
     std::vector<int8_t> buff_to_gpu(mem_size);
     auto buff_to_gpu_ptr = buff_to_gpu.data();
 

@@ -82,7 +82,7 @@ inline int64_t count_distinct_set_size(
     auto set_vals = reinterpret_cast<int8_t*>(set_handle);
     if (count_distinct_desc.approximate) {
       CHECK_GT(count_distinct_desc.bitmap_sz_bits, 0);
-      return count_distinct_desc.device_type == ExecutorDeviceType::GPU
+      return count_distinct_desc.device_type == ExecutorDeviceType::CUDA
                  ? hll_size(reinterpret_cast<const int32_t*>(set_vals),
                             count_distinct_desc.bitmap_sz_bits)
                  : hll_size(reinterpret_cast<const int8_t*>(set_vals),
@@ -107,18 +107,18 @@ inline void count_distinct_set_union(
     auto old_set = reinterpret_cast<int8_t*>(old_set_handle);
     if (new_count_distinct_desc.approximate) {
       CHECK(old_count_distinct_desc.approximate);
-      if (new_count_distinct_desc.device_type == ExecutorDeviceType::GPU &&
-          old_count_distinct_desc.device_type == ExecutorDeviceType::GPU) {
+      if (new_count_distinct_desc.device_type == ExecutorDeviceType::CUDA &&
+          old_count_distinct_desc.device_type == ExecutorDeviceType::CUDA) {
         hll_unify(reinterpret_cast<int32_t*>(new_set),
                   reinterpret_cast<int32_t*>(old_set),
                   1 << old_count_distinct_desc.bitmap_sz_bits);
-      } else if (new_count_distinct_desc.device_type == ExecutorDeviceType::GPU &&
+      } else if (new_count_distinct_desc.device_type == ExecutorDeviceType::CUDA &&
                  old_count_distinct_desc.device_type == ExecutorDeviceType::CPU) {
         hll_unify(reinterpret_cast<int32_t*>(new_set),
                   reinterpret_cast<int8_t*>(old_set),
                   1 << old_count_distinct_desc.bitmap_sz_bits);
       } else if (new_count_distinct_desc.device_type == ExecutorDeviceType::CPU &&
-                 old_count_distinct_desc.device_type == ExecutorDeviceType::GPU) {
+                 old_count_distinct_desc.device_type == ExecutorDeviceType::CUDA) {
         hll_unify(reinterpret_cast<int8_t*>(new_set),
                   reinterpret_cast<int32_t*>(old_set),
                   1 << old_count_distinct_desc.bitmap_sz_bits);

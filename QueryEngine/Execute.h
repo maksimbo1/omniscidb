@@ -519,7 +519,7 @@ class Executor {
   llvm::Value* aggregateWindowStatePtr();
 
   bool isArchPascalOrLater(const ExecutorDeviceType dt) const {
-    if (dt == ExecutorDeviceType::GPU) {
+    if (dt == ExecutorDeviceType::CUDA) {
       const auto cuda_mgr = catalog_->getDataMgr().getCudaMgr();
       LOG_IF(FATAL, cuda_mgr == nullptr)
           << "No CudaMgr instantiated, unable to check device architecture";

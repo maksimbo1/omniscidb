@@ -76,7 +76,7 @@ llvm::Value* CodeGenerator::codegen(const Analyzer::CharLengthExpr* expr,
     }
     str_lv.push_back(cgen_state_->emitCall("extract_str_ptr", {str_lv.front()}));
     str_lv.push_back(cgen_state_->emitCall("extract_str_len", {str_lv.front()}));
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       throw QueryMustRunOnCpu();
     }
   }
@@ -107,7 +107,7 @@ llvm::Value* CodeGenerator::codegen(const Analyzer::KeyForStringExpr* expr,
 llvm::Value* CodeGenerator::codegen(const Analyzer::LowerExpr* expr,
                                     const CompilationOptions& co) {
   AUTOMATIC_IR_METADATA(cgen_state_);
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     throw QueryMustRunOnCpu();
   }
 
@@ -164,7 +164,7 @@ llvm::Value* CodeGenerator::codegen(const Analyzer::LikeExpr* expr,
     CHECK_EQ(size_t(1), str_lv.size());
     str_lv.push_back(cgen_state_->emitCall("extract_str_ptr", {str_lv.front()}));
     str_lv.push_back(cgen_state_->emitCall("extract_str_len", {str_lv.front()}));
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       throw QueryMustRunOnCpu();
     }
   }
@@ -373,7 +373,7 @@ llvm::Value* CodeGenerator::codegen(const Analyzer::RegexpExpr* expr,
         "high");
   }
   // Now we know we are working on NONE ENCODED column. So switch back to CPU
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     throw QueryMustRunOnCpu();
   }
   auto str_lv = codegen(expr->get_arg(), true, co);

@@ -52,15 +52,15 @@ const int kNotPresent = -2;
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -564,7 +564,7 @@ TEST(Select, DropAndReCreate_OneToMany_HashTable_WithReversedTupleInsertion) {
 }
 
 TEST(Truncate, JoinCacheInvalidationTest) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     run_ddl_statement("DROP TABLE IF EXISTS cache_invalid_t1;");
@@ -684,7 +684,7 @@ TEST(Truncate, OverlapsJoinCacheInvalidationTest) {
 }
 
 TEST(Update, JoinCacheInvalidationTest) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     run_ddl_statement("drop table if exists string_join1");
@@ -730,7 +730,7 @@ TEST(Update, JoinCacheInvalidationTest) {
 }
 
 TEST(Delete, JoinCacheInvalidationTest) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     run_ddl_statement("drop table if exists string_join1;");
@@ -778,7 +778,7 @@ TEST(Delete, JoinCacheInvalidationTest) {
 TEST(Delete, JoinCacheInvalidationTest_DropTable) {
   // todo: when we support per-table cached hashtable invalidation,
   // then this test should be changed either
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     run_ddl_statement("DROP TABLE IF EXISTS cache_invalid_t1;");

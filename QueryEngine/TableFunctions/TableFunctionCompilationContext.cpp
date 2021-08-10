@@ -238,8 +238,8 @@ TableFunctionCompilationContext::TableFunctionCompilationContext()
 void TableFunctionCompilationContext::compile(const TableFunctionExecutionUnit& exe_unit,
                                               const CompilationOptions& co,
                                               Executor* executor) {
-  generateEntryPoint(exe_unit, /*is_gpu=*/co.device_type == ExecutorDeviceType::GPU);
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  generateEntryPoint(exe_unit, /*is_gpu=*/co.device_type == ExecutorDeviceType::CUDA);
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     generateGpuKernel();
   }
   finalize(co, executor);
@@ -460,7 +460,7 @@ void TableFunctionCompilationContext::finalize(const CompilationOptions& co,
     TODO 1: eliminate need for OverrideFromSrc
     TODO 2: detect and link only the udf's that are needed
   */
-  if (co.device_type == ExecutorDeviceType::GPU && rt_udf_gpu_module != nullptr) {
+  if (co.device_type == ExecutorDeviceType::CUDA && rt_udf_gpu_module != nullptr) {
     CodeGenerator::link_udf_module(rt_udf_gpu_module,
                                    *module_,
                                    cgen_state_.get(),
@@ -479,7 +479,7 @@ void TableFunctionCompilationContext::finalize(const CompilationOptions& co,
   LOG(IR) << "Table Function Entry Point IR\n"
           << serialize_llvm_object(entry_point_func_);
 
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     LOG(IR) << "Table Function Kernel IR\n" << serialize_llvm_object(kernel_func_);
 
     CHECK(executor);

@@ -108,8 +108,7 @@ ScalarCodeGenerator::CompiledExpression ScalarCodeGenerator::compile(
   cgen_state_->ir_builder_.CreateStore(expr_lvs.front(),
                                        cgen_state_->row_func_->arg_begin());
   cgen_state_->ir_builder_.CreateRet(ll_int<int32_t>(0, ctx));
-  if (co.device_type == ExecutorDeviceType::GPU ||
-      co.device_type == ExecutorDeviceType::L0) {
+  if (is_gpu(co.device_type)) {
     std::vector<llvm::Type*> wrapper_arg_types(arg_types.size() + 1);
     wrapper_arg_types[0] = llvm::PointerType::get(get_int_type(32, ctx), addr_space);
     wrapper_arg_types[1] = arg_types[0];
@@ -151,7 +150,7 @@ std::vector<void*> ScalarCodeGenerator::generateNativeCode(
           generateNativeCPUCode(compiled_expression.func, {compiled_expression.func}, co);
       return {execution_engine_->getPointerToFunction(compiled_expression.func)};
     }
-    case ExecutorDeviceType::GPU: {
+    case ExecutorDeviceType::CUDA: {
       return generateNativeGPUCode(
           compiled_expression.func, compiled_expression.wrapper_func, co);
     }

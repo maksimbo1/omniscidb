@@ -34,15 +34,15 @@ bool g_keep_data{false};
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !QR::get()->gpusPresent();
+  return device_type == ExecutorDeviceType::CUDA && !QR::get()->gpusPresent();
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -77,7 +77,7 @@ class UnicodeSpecialChars : public ::testing::Test {
 };
 
 TEST_F(UnicodeSpecialChars, Basics) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     auto rows = run_multiple_agg("SELECT count(*) FROM special_chars WHERE str = '" +
@@ -122,7 +122,7 @@ class EscapeSeqSpecialChars : public ::testing::Test {
 };
 
 TEST_F(EscapeSeqSpecialChars, Basics) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     {

@@ -190,7 +190,7 @@ QueryMemoryInitializer::QueryMemoryInitializer(
   if (!ra_exe_unit.use_bump_allocator) {
     check_total_bitmap_memory(query_mem_desc);
   }
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     allocateCountDistinctGpuMem(query_mem_desc);
   }
 
@@ -206,7 +206,7 @@ QueryMemoryInitializer::QueryMemoryInitializer(
     return;
   }
 
-  const auto thread_count = device_type == ExecutorDeviceType::GPU
+  const auto thread_count = device_type == ExecutorDeviceType::CUDA
                                 ? executor->blockSize() * executor->gridSize()
                                 : 1;
 
@@ -243,12 +243,12 @@ QueryMemoryInitializer::QueryMemoryInitializer(
     CHECK(query_mem_desc.hasKeylessHash());
   }
 
-  const auto step = device_type == ExecutorDeviceType::GPU &&
+  const auto step = device_type == ExecutorDeviceType::CUDA &&
                             query_mem_desc.threadsShareMemory() &&
                             query_mem_desc.isGroupBy()
                         ? executor->blockSize()
                         : size_t(1);
-  const auto index_buffer_qw = device_type == ExecutorDeviceType::GPU && sort_on_gpu &&
+  const auto index_buffer_qw = device_type == ExecutorDeviceType::CUDA && sort_on_gpu &&
                                        query_mem_desc.hasKeylessHash()
                                    ? query_mem_desc.getEntryCount()
                                    : size_t(0);
@@ -339,7 +339,7 @@ QueryMemoryInitializer::QueryMemoryInitializer(
   CHECK_GE(group_buffer_size, size_t(0));
 
   const auto index_buffer_qw =
-      device_type == ExecutorDeviceType::GPU && query_mem_desc.hasKeylessHash()
+      device_type == ExecutorDeviceType::CUDA && query_mem_desc.hasKeylessHash()
           ? query_mem_desc.getEntryCount()
           : size_t(0);
   const auto actual_group_buffer_size =
@@ -388,7 +388,7 @@ void QueryMemoryInitializer::initGroupByBuffer(
   } else {
     auto rows_ptr = buffer;
     auto actual_entry_count = query_mem_desc.getEntryCount();
-    const auto thread_count = device_type == ExecutorDeviceType::GPU
+    const auto thread_count = device_type == ExecutorDeviceType::CUDA
                                   ? executor->blockSize() * executor->gridSize()
                                   : 1;
     auto warp_size =
@@ -769,7 +769,7 @@ GpuGroupByBuffers QueryMemoryInitializer::prepareTopNHeapsDevBuffer(
   device_allocator_->copyToDevice(
       dev_ptr, dev_buffers.data(), thread_count * sizeof(int8_t*));
 
-  CHECK(query_mem_desc.lazyInitGroups(ExecutorDeviceType::GPU));
+  CHECK(query_mem_desc.lazyInitGroups(ExecutorDeviceType::CUDA));
 
   device_allocator_->zeroDeviceMem(reinterpret_cast<int8_t*>(dev_buffer),
                                    thread_count * sizeof(int64_t));
@@ -839,12 +839,12 @@ GpuGroupByBuffers QueryMemoryInitializer::createAndInitializeGroupByBufferGpu(
   if (render_allocator) {
     CHECK_EQ(size_t(0), render_allocator->getAllocatedSize() % 8);
   }
-  if (query_mem_desc.lazyInitGroups(ExecutorDeviceType::GPU)) {
+  if (query_mem_desc.lazyInitGroups(ExecutorDeviceType::CUDA)) {
     CHECK(!render_allocator);
 
     const size_t step{query_mem_desc.threadsShareMemory() ? block_size_x : 1};
     size_t groups_buffer_size{query_mem_desc.getBufferSizeBytes(
-        ExecutorDeviceType::GPU, dev_group_by_buffers.entry_count)};
+        ExecutorDeviceType::CUDA, dev_group_by_buffers.entry_count)};
     auto group_by_dev_buffer = dev_group_by_buffers.second;
     const size_t col_count = query_mem_desc.getSlotCount();
     int8_t* col_widths_dev_ptr{nullptr};
@@ -858,7 +858,7 @@ GpuGroupByBuffers QueryMemoryInitializer::createAndInitializeGroupByBufferGpu(
           col_widths_dev_ptr, compact_col_widths.data(), col_count * sizeof(int8_t));
     }
     const int8_t warp_count =
-        query_mem_desc.interleavedBins(ExecutorDeviceType::GPU) ? warp_size : 1;
+        query_mem_desc.interleavedBins(ExecutorDeviceType::CUDA) ? warp_size : 1;
     for (size_t i = 0; i < getGroupByBuffersSize(); i += step) {
       if (output_columnar) {
         init_columnar_group_by_buffer_on_device(
@@ -1067,7 +1067,7 @@ void QueryMemoryInitializer::copyGroupByBuffersFromGpu(
         streaming_top_n::get_heap_size(query_mem_desc.getRowSize(), n, thread_count);
   } else {
     total_buff_size =
-        query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::GPU, entry_count);
+        query_mem_desc.getBufferSizeBytes(ExecutorDeviceType::CUDA, entry_count);
   }
   copy_group_by_buffers_from_gpu(device_allocator,
                                  group_by_buffers_,

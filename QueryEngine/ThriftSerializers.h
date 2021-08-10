@@ -319,7 +319,7 @@ inline TCountDistinctDescriptor count_distinct_descriptor_to_thrift(
       count_distinct_descriptor.bitmap_sz_bits;
   thrift_count_distinct_descriptor.approximate = count_distinct_descriptor.approximate;
   thrift_count_distinct_descriptor.device_type =
-      count_distinct_descriptor.device_type == ExecutorDeviceType::GPU ? TDeviceType::GPU
+      count_distinct_descriptor.device_type == ExecutorDeviceType::CUDA ? TDeviceType::GPU
                                                                        : TDeviceType::CPU;
   thrift_count_distinct_descriptor.sub_bitmap_count =
       count_distinct_descriptor.sub_bitmap_count;
@@ -355,7 +355,7 @@ inline CountDistinctDescriptor count_distinct_descriptor_from_thrift(
   count_distinct_descriptor.approximate = thrift_count_distinct_descriptor.approximate;
   count_distinct_descriptor.device_type =
       thrift_count_distinct_descriptor.device_type == TDeviceType::GPU
-          ? ExecutorDeviceType::GPU
+          ? ExecutorDeviceType::CUDA
           : ExecutorDeviceType::CPU;
   count_distinct_descriptor.sub_bitmap_count =
       thrift_count_distinct_descriptor.sub_bitmap_count;

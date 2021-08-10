@@ -277,7 +277,7 @@ std::vector<llvm::Value*> CodeGenerator::codegenGeoUOper(
     const Analyzer::GeoUOper* geo_expr,
     const CompilationOptions& co) {
   AUTOMATIC_IR_METADATA(cgen_state_);
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     if (geo_expr->getOp() != Geospatial::GeoBase::GeoOp::kPROJECTION) {
       throw QueryMustRunOnCpu();
     }
@@ -342,7 +342,7 @@ std::vector<llvm::Value*> CodeGenerator::codegenGeoBinOper(
     Analyzer::GeoBinOper const* geo_expr,
     CompilationOptions const& co) {
   AUTOMATIC_IR_METADATA(cgen_state_);
-  if (co.device_type == ExecutorDeviceType::GPU) {
+  if (co.device_type == ExecutorDeviceType::CUDA) {
     throw QueryMustRunOnCpu();
   }
 #ifndef ENABLE_GEOS

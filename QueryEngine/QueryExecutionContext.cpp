@@ -51,7 +51,7 @@ QueryExecutionContext::QueryExecutionContext(
     , output_columnar_(output_columnar) {
   CHECK(executor);
   auto& data_mgr = executor->catalog_->getDataMgr();
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     gpu_allocator_ = std::make_unique<CudaAllocator>(&data_mgr, device_id);
   }
   if (device_type == ExecutorDeviceType::L0) {
@@ -167,7 +167,7 @@ ResultSetPtr QueryExecutionContext::getRowSet(
   for (size_t i = 0; i < group_by_buffers_size; i += step) {
     results_per_sm.emplace_back(groupBufferToResults(i), std::vector<size_t>{});
   }
-  CHECK(device_type_ == ExecutorDeviceType::GPU);
+  CHECK(device_type_ == ExecutorDeviceType::CUDA);
   return executor_->reduceMultiDeviceResults(
       ra_exe_unit, results_per_sm, row_set_mem_owner_, query_mem_desc);
 }
@@ -437,7 +437,7 @@ std::vector<int64_t*> QueryExecutionContext::launchGpuCode(
     const auto output_buffer_size_per_agg = num_results_per_agg_col * sizeof(int64_t);
     if (ra_exe_unit.estimator) {
       estimator_result_set_.reset(new ResultSet(
-          ra_exe_unit.estimator, ExecutorDeviceType::GPU, device_id, data_mgr));
+          ra_exe_unit.estimator, ExecutorDeviceType::CUDA, device_id, data_mgr));
       out_vec_dev_buffers.push_back(estimator_result_set_->getDeviceEstimatorBuffer());
     } else {
       for (size_t i = 0; i < agg_col_count; ++i) {

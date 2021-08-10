@@ -241,7 +241,7 @@ class ArrowResultSetConverter {
 
   std::shared_ptr<ResultSet> results_;
   std::shared_ptr<Data_Namespace::DataMgr> data_mgr_ = nullptr;
-  ExecutorDeviceType device_type_ = ExecutorDeviceType::GPU;
+  ExecutorDeviceType device_type_ = ExecutorDeviceType::CUDA;
   int32_t device_id_ = 0;
   std::vector<std::string> col_names_;
   int32_t top_n_;

@@ -699,7 +699,7 @@ std::shared_ptr<HashJoin> Executor::buildCurrentLevelHashTable(
       hash_table_or_error = buildHashTableForQualifier(
           qual_bin_oper,
           query_infos,
-          co.device_type == ExecutorDeviceType::GPU ? MemoryLevel::GPU_LEVEL
+          co.device_type == ExecutorDeviceType::CUDA ? MemoryLevel::GPU_LEVEL
                                                     : MemoryLevel::CPU_LEVEL,
           current_level_join_conditions.type,
           HashType::OneToOne,

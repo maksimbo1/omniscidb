@@ -35,15 +35,15 @@ using namespace TestHelpers;
 
 bool skip_tests_on_gpu(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests_on_gpu(dt)) {                               \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -65,7 +65,7 @@ void executeAllScenarios(TEST_BODY fn) {
       g_trivial_loop_join_threshold = 1000;
     };
 
-    for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+    for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
       SKIP_NO_GPU();
       fn(dt);
     }

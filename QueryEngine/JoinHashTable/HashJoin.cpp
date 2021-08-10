@@ -305,10 +305,10 @@ std::shared_ptr<HashJoin> HashJoin::getInstance(
     if (join_hash_table->getMemoryLevel() == Data_Namespace::MemoryLevel::GPU_LEVEL) {
       for (int device_id = 0; device_id < join_hash_table->getDeviceCount();
            ++device_id) {
-        if (join_hash_table->getJoinHashBufferSize(ExecutorDeviceType::GPU, device_id) <=
+        if (join_hash_table->getJoinHashBufferSize(ExecutorDeviceType::CUDA, device_id) <=
             1000) {
           VLOG(2) << "Built GPU hash table: "
-                  << join_hash_table->toString(ExecutorDeviceType::GPU, device_id);
+                  << join_hash_table->toString(ExecutorDeviceType::CUDA, device_id);
         }
       }
     } else {

@@ -34,9 +34,9 @@ using QR = QueryRunner::QueryRunner;
 
 bool skip_tests_on_gpu(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
@@ -213,7 +213,7 @@ void runSingleValueTest(std::string colType, ExecutorDeviceType dt) {
 }
 
 TEST(Select, SingleValue) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     runSingleValueTest("TINYINT", dt);
     runSingleValueTest("SMALLINT", dt);
     runSingleValueTest("INTEGER", dt);

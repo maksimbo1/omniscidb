@@ -627,7 +627,7 @@ InternalTargetValue ResultSet::getVarlenOrderEntry(char* str_ptr,
                                                    const size_t str_len) const {
   char* host_str_ptr{nullptr};
   std::vector<int8_t> cpu_buffer;
-  if (device_type_ == ExecutorDeviceType::GPU) {
+  if (device_type_ == ExecutorDeviceType::CUDA) {
     cpu_buffer.resize(str_len);
     const auto executor = query_mem_desc_.getExecutor();
     CHECK(executor);
@@ -1394,7 +1394,7 @@ TargetValue ResultSet::makeVarlenTargetValue(const int8_t* ptr1,
     length *= elem_ti.get_array_context_logical_size();
   }
   std::vector<int8_t> cpu_buffer;
-  if (varlen_ptr && device_type_ == ExecutorDeviceType::GPU) {
+  if (varlen_ptr && device_type_ == ExecutorDeviceType::CUDA) {
     cpu_buffer.resize(length);
     const auto executor = query_mem_desc_.getExecutor();
     CHECK(executor);
@@ -1439,7 +1439,7 @@ bool ResultSet::isGeoColOnGpu(const size_t col_idx) const {
     }
   }
 
-  return device_type_ == ExecutorDeviceType::GPU;
+  return device_type_ == ExecutorDeviceType::CUDA;
 }
 
 // Reads a geo value from a series of ptrs to var len types
@@ -1514,7 +1514,7 @@ TargetValue ResultSet::makeGeoTargetValue(const int8_t* geo_target_ptr,
     return getColumnFrag(storage_idx.first, target_logical_idx, global_idx);
   };
 
-  const bool is_gpu_fetch = device_type_ == ExecutorDeviceType::GPU;
+  const bool is_gpu_fetch = device_type_ == ExecutorDeviceType::CUDA;
 
   auto getDataMgr = [&]() {
     auto executor = query_mem_desc_.getExecutor();

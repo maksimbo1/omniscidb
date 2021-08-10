@@ -245,7 +245,7 @@ QueryRunner::QueryRunner(const char* db_path,
   auto cat = sys_cat.getCatalog(db, create_db);
   CHECK(cat);
   session_info_ = std::make_unique<Catalog_Namespace::SessionInfo>(
-      cat, user, ExecutorDeviceType::GPU, "");
+      cat, user, ExecutorDeviceType::CUDA, "");
 }
 
 QueryRunner::~QueryRunner() {
@@ -651,7 +651,7 @@ std::shared_ptr<ExecutionResult> QueryRunner::runSelectQuery(const std::string& 
   std::cerr << "Device type is "
             << ((co.device_type == ExecutorDeviceType::L0)
                     ? "L0"
-                    : ((co.device_type == ExecutorDeviceType::GPU) ? "GPU" : "CPU"));
+                    : ((co.device_type == ExecutorDeviceType::CUDA) ? "GPU" : "CPU"));
   std::cerr << std::endl;
   CHECK(session_info_);
   CHECK(!Catalog_Namespace::SysCatalog::instance().isAggregator());

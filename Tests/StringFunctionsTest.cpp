@@ -274,7 +274,7 @@ TEST_F(LowerFunctionTest, LowercaseGpuMode) {
   auto result_set = QueryRunner::QueryRunner::get()->runSQL(
       "select first_name, last_name from lower_function_test_people "
       "where lower(country_code) = 'us';",
-      ExecutorDeviceType::GPU,
+      ExecutorDeviceType::CUDA,
       true,
       true);
   std::vector<std::vector<ScalarTargetValue>> expected_result_set{{"JOHN", "SMITH"},

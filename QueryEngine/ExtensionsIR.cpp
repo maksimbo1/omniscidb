@@ -238,7 +238,7 @@ llvm::Value* CodeGenerator::codegenFunctionOper(
     const CompilationOptions& co) {
   AUTOMATIC_IR_METADATA(cgen_state_);
   ExtensionFunction ext_func_sig = [=]() {
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       try {
         return bind_function(function_oper, /* is_gpu= */ true);
       } catch (ExtensionFunctionBindingError& e) {
@@ -259,7 +259,7 @@ llvm::Value* CodeGenerator::codegenFunctionOper(
   const auto& ret_ti = function_oper->get_type_info();
   CHECK(ret_ti.is_integer() || ret_ti.is_fp() || ret_ti.is_boolean() ||
         ret_ti.is_buffer());
-  if (ret_ti.is_buffer() && co.device_type == ExecutorDeviceType::GPU) {
+  if (ret_ti.is_buffer() && co.device_type == ExecutorDeviceType::CUDA) {
     // TODO: This is not necessary for runtime UDFs because RBC does
     // not generated GPU LLVM IR when the UDF is using Buffer objects.
     // However, we cannot remove it until C++ UDFs can be defined for

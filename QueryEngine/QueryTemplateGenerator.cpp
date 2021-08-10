@@ -574,7 +574,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
     const GpuSharedMemoryContext& gpu_smem_context) {
   std::cerr << "Building group by template!" << std::endl;
   if (gpu_smem_context.isSharedMemoryUsed()) {
-    CHECK(device_type == ExecutorDeviceType::GPU);
+    CHECK(device_type == ExecutorDeviceType::CUDA);
   }
   using namespace llvm;
   auto calling_conv =

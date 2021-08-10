@@ -47,7 +47,7 @@ class PerfectJoinHashTableBuilder {
     hash_table_ =
         std::make_unique<PerfectHashTable>(catalog_,
                                            layout,
-                                           ExecutorDeviceType::GPU,
+                                           ExecutorDeviceType::CUDA,
                                            hash_entry_info.getNormalizedHashEntryCount(),
                                            join_column.num_elems);
     hash_table_->allocateGpuMemory(total_count, device_id);

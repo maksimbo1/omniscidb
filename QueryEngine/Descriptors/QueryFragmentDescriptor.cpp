@@ -161,14 +161,14 @@ void QueryFragmentDescriptor::buildFragmentPerKernelForTable(
     const int chosen_device_count =
         device_type == ExecutorDeviceType::CPU ? 1 : device_count;
     CHECK_GT(chosen_device_count, 0);
-    const auto memory_level = device_type == ExecutorDeviceType::GPU
+    const auto memory_level = device_type == ExecutorDeviceType::CUDA
                                   ? Data_Namespace::GPU_LEVEL
                                   : Data_Namespace::CPU_LEVEL;
     const int device_id = (device_type == ExecutorDeviceType::CPU || fragment.shard == -1)
                               ? fragment.deviceIds[static_cast<int>(memory_level)]
                               : fragment.shard % chosen_device_count;
 
-    if (device_type == ExecutorDeviceType::GPU) {
+    if (device_type == ExecutorDeviceType::CUDA) {
       checkDeviceMemoryUsage(fragment, device_id, num_bytes_for_row);
     }
 
@@ -394,7 +394,7 @@ void QueryFragmentDescriptor::buildMultifragKernelMap(
         fragment.shard == -1
             ? fragment.deviceIds[static_cast<int>(Data_Namespace::GPU_LEVEL)]
             : fragment.shard % device_count;
-    if (device_type == ExecutorDeviceType::GPU) {
+    if (device_type == ExecutorDeviceType::CUDA) {
       checkDeviceMemoryUsage(fragment, device_id, num_bytes_for_row);
     }
     for (size_t j = 0; j < ra_exe_unit.input_descs.size(); ++j) {

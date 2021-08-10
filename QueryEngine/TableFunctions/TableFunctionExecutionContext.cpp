@@ -38,7 +38,7 @@ const int8_t* create_literal_buffer(T literal,
       std::memcpy(literals_owner.back().get(), &literal, sizeof(T));
       return reinterpret_cast<const int8_t*>(literals_owner.back().get());
     }
-    case ExecutorDeviceType::GPU: {
+    case ExecutorDeviceType::CUDA: {
       CHECK(gpu_allocator);
       const auto gpu_literal_buf_ptr = gpu_allocator->alloc(sizeof(int64_t));
       gpu_allocator->copyToDevice(
@@ -90,7 +90,7 @@ ResultSetPtr TableFunctionExecutionContext::execute(
 
   const int device_id = 0;  // TODO(adb): support multi-gpu table functions
   std::unique_ptr<CudaAllocator> device_allocator;
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     auto& data_mgr = executor->catalog_->getDataMgr();
     device_allocator.reset(new CudaAllocator(&data_mgr, device_id));
   }
@@ -217,7 +217,7 @@ ResultSetPtr TableFunctionExecutionContext::execute(
                            col_sizes,
                            *output_column_size,
                            executor);
-    case ExecutorDeviceType::GPU:
+    case ExecutorDeviceType::CUDA:
       return launchGpuCode(exe_unit,
                            compilation_context,
                            col_buf_ptrs,
@@ -360,7 +360,7 @@ ResultSetPtr TableFunctionExecutionContext::launchGpuCode(
       exe_unit,
       query_mem_desc,
       device_id,
-      ExecutorDeviceType::GPU,
+      ExecutorDeviceType::CUDA,
       allocated_output_row_count,
       std::vector<std::vector<const int8_t*>>{col_buf_ptrs},
       std::vector<std::vector<uint64_t>>{{0}},  // frag offsets

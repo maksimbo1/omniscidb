@@ -65,7 +65,7 @@ class QueryCompilationDescriptor {
         return std::string{"IR for the CPU:\n===============\n" +
                            compilation_result_.llvm_ir};
       }
-      case ExecutorDeviceType::GPU: {
+      case ExecutorDeviceType::CUDA: {
         return std::string{"IR for the GPU:\n===============\n" +
                            compilation_result_.llvm_ir};
       }

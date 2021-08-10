@@ -181,7 +181,7 @@ ColRangeInfo GroupByAndAggregate::getColRangeInfo() {
   // uses significantly more memory.
   const int64_t baseline_threshold =
       has_count_distinct(ra_exe_unit_)
-          ? (device_type_ == ExecutorDeviceType::GPU ? (Executor::baseline_threshold / 4)
+          ? (device_type_ == ExecutorDeviceType::CUDA ? (Executor::baseline_threshold / 4)
                                                      : Executor::baseline_threshold)
           : Executor::baseline_threshold;
   if (ra_exe_unit_.groupby_exprs.size() != 1) {
@@ -348,7 +348,7 @@ GroupByAndAggregate::GroupByAndAggregate(
 int64_t GroupByAndAggregate::getShardedTopBucket(const ColRangeInfo& col_range_info,
                                                  const size_t shard_count) const {
   size_t device_count{0};
-  if (device_type_ == ExecutorDeviceType::GPU) {
+  if (device_type_ == ExecutorDeviceType::CUDA) {
     auto cuda_mgr = executor_->getCatalog()->getDataMgr().getCudaMgr();
     CHECK(cuda_mgr);
     device_count = executor_->getCatalog()->getDataMgr().getCudaMgr()->getDeviceCount();
@@ -871,8 +871,7 @@ bool GroupByAndAggregate::codegen(llvm::Value* filter_result,
         LL_BUILDER.CreateStore(LL_INT(int32_t(1)), crt_matched);
         auto total_matched_ptr = get_arg_by_name(ROW_FUNC, "total_matched");
         llvm::Value* old_total_matched_val{nullptr};
-        if (co.device_type == ExecutorDeviceType::GPU ||
-            co.device_type == ExecutorDeviceType::L0) {
+        if (is_gpu(co.device_type)) {
           old_total_matched_val =
               LL_BUILDER.CreateAtomicRMW(llvm::AtomicRMWInst::Add,
                                          total_matched_ptr,
@@ -1644,7 +1643,7 @@ void GroupByAndAggregate::codegenCountDistinct(
   if (agg_info.agg_kind == kAPPROX_COUNT_DISTINCT) {
     CHECK(count_distinct_descriptor.impl_type_ == CountDistinctImplType::Bitmap);
     agg_args.push_back(LL_INT(int32_t(count_distinct_descriptor.bitmap_sz_bits)));
-    if (device_type == ExecutorDeviceType::GPU) {
+    if (device_type == ExecutorDeviceType::CUDA) {
       const auto base_dev_addr = getAdditionalLiteral(-1);
       const auto base_host_addr = getAdditionalLiteral(-2);
       agg_args.push_back(base_dev_addr);
@@ -1671,7 +1670,7 @@ void GroupByAndAggregate::codegenCountDistinct(
     agg_fname += "_skip_val";
     agg_args.push_back(null_lv);
   }
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     CHECK(count_distinct_descriptor.impl_type_ == CountDistinctImplType::Bitmap);
     agg_fname += "_gpu";
     const auto base_dev_addr = getAdditionalLiteral(-1);
@@ -1698,7 +1697,7 @@ void GroupByAndAggregate::codegenApproxMedian(const size_t target_idx,
                                               std::vector<llvm::Value*>& agg_args,
                                               const QueryMemoryDescriptor& query_mem_desc,
                                               const ExecutorDeviceType device_type) {
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     throw QueryMustRunOnCpu();
   }
   llvm::BasicBlock *calc, *skip;

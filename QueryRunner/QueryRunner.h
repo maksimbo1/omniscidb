@@ -112,7 +112,7 @@ class QueryRunner {
   }
 
   void addSessionId(const std::string& session_id,
-                    ExecutorDeviceType device_type = ExecutorDeviceType::GPU) {
+                    ExecutorDeviceType device_type = ExecutorDeviceType::CUDA) {
     session_info_ =
         std::make_unique<Catalog_Namespace::SessionInfo>(session_info_->get_catalog_ptr(),
                                                          session_info_->get_currentUser(),
@@ -220,7 +220,7 @@ class ImportDriver : public QueryRunner {
  public:
   ImportDriver(std::shared_ptr<Catalog_Namespace::Catalog> cat,
                const Catalog_Namespace::UserMetadata& user,
-               const ExecutorDeviceType dt = ExecutorDeviceType::GPU,
+               const ExecutorDeviceType dt = ExecutorDeviceType::CUDA,
                const std::string session_id = "");
 
   void importGeoTable(const std::string& file_path,

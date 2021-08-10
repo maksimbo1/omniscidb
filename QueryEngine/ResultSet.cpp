@@ -133,7 +133,7 @@ ResultSet::ResultSet(const std::shared_ptr<const Analyzer::Estimator> estimator,
     , for_validation_only_(false)
     , cached_row_count_(-1)
     , geo_return_type_(GeoReturnType::WktString) {
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     device_estimator_buffer_ = CudaAllocator::allocGpuAbstractBuffer(
         data_mgr_, estimator_->getBufferSize(), device_id_);
     data_mgr->getCudaMgr()->zeroDeviceMem(device_estimator_buffer_->getMemoryPtr(),
@@ -413,7 +413,7 @@ const std::vector<int64_t>& ResultSet::getTargetInitVals() const {
 }
 
 int8_t* ResultSet::getDeviceEstimatorBuffer() const {
-  CHECK(device_type_ == ExecutorDeviceType::GPU);
+  CHECK(device_type_ == ExecutorDeviceType::CUDA);
   CHECK(device_estimator_buffer_);
   return device_estimator_buffer_->getMemoryPtr();
 }
@@ -423,7 +423,7 @@ int8_t* ResultSet::getHostEstimatorBuffer() const {
 }
 
 void ResultSet::syncEstimatorBuffer() const {
-  CHECK(device_type_ == ExecutorDeviceType::GPU);
+  CHECK(device_type_ == ExecutorDeviceType::CUDA);
   CHECK(!host_estimator_buffer_);
   CHECK_EQ(size_t(0), estimator_->getBufferSize() % sizeof(int64_t));
   host_estimator_buffer_ =
@@ -560,7 +560,7 @@ void ResultSet::baselineSort(const std::list<Analyzer::OrderEntry>& order_entrie
   // If we only have on GPU, it's usually faster to do multi-threaded radix sort on CPU
   if (getGpuCount() > 1) {
     try {
-      doBaselineSort(ExecutorDeviceType::GPU, order_entries, top_n, executor);
+      doBaselineSort(ExecutorDeviceType::CUDA, order_entries, top_n, executor);
     } catch (...) {
       doBaselineSort(ExecutorDeviceType::CPU, order_entries, top_n, executor);
     }
@@ -959,7 +959,7 @@ void ResultSet::radixSortOnGpu(
   copy_group_by_buffers_from_gpu(
       *allocator,
       group_by_buffers,
-      query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::GPU),
+      query_mem_desc_.getBufferSizeBytes(ExecutorDeviceType::CUDA),
       dev_group_by_buffers.second,
       query_mem_desc_,
       block_size_,

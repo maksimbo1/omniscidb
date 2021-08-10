@@ -887,7 +887,7 @@ std::pair<size_t, size_t> OverlapsJoinHashTable::approximateTupleCount(
       11,
       true,
       effective_memory_level == Data_Namespace::MemoryLevel::GPU_LEVEL
-          ? ExecutorDeviceType::GPU
+          ? ExecutorDeviceType::CUDA
           : ExecutorDeviceType::CPU,
       1};
   const auto padded_size_bytes = count_distinct_desc.bitmapPaddedSizeBytes();
@@ -1337,7 +1337,7 @@ std::shared_ptr<BaselineHashTable> OverlapsJoinHashTable::copyCpuHashTableToGpu(
   CHECK(gpu_buffer_ptr);
 
   CHECK_LE(cpu_hash_table->getHashTableBufferSize(ExecutorDeviceType::CPU),
-           gpu_hash_table->getHashTableBufferSize(ExecutorDeviceType::GPU));
+           gpu_hash_table->getHashTableBufferSize(ExecutorDeviceType::CUDA));
 
   auto device_allocator = data_mgr.createGpuAllocator(device_id);
   device_allocator->copyToDevice(
@@ -1619,7 +1619,7 @@ std::string OverlapsJoinHashTable::toString(const ExecutorDeviceType device_type
   auto buffer_size = hash_table->getHashTableBufferSize(device_type);
 #ifdef HAVE_CUDA
   std::unique_ptr<int8_t[]> buffer_copy;
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     buffer_copy = std::make_unique<int8_t[]>(buffer_size);
     CHECK(executor_);
     auto& data_mgr = executor_->getCatalog()->getDataMgr();
@@ -1658,7 +1658,7 @@ std::set<DecodedJoinHashBufferEntry> OverlapsJoinHashTable::toSet(
   auto buffer_size = hash_table->getHashTableBufferSize(device_type);
 #ifdef HAVE_CUDA
   std::unique_ptr<int8_t[]> buffer_copy;
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     buffer_copy = std::make_unique<int8_t[]>(buffer_size);
     CHECK(executor_);
     auto& data_mgr = executor_->getCatalog()->getDataMgr();

@@ -84,7 +84,7 @@ void ResultSet::doBaselineSort(const ExecutorDeviceType device_type,
   auto groupby_buffer = storage_->getUnderlyingBuffer();
   auto data_mgr = getDataManager();
   const auto step = static_cast<size_t>(
-      device_type == ExecutorDeviceType::GPU ? getGpuCount() : cpu_threads());
+      device_type == ExecutorDeviceType::CUDA ? getGpuCount() : cpu_threads());
   CHECK_GE(step, size_t(1));
   const auto key_bytewidth = query_mem_desc_.getEffectiveKeyWidth();
   if (step > 1) {
@@ -103,7 +103,7 @@ void ResultSet::doBaselineSort(const ExecutorDeviceType device_type,
            top_n,
            start,
            step] {
-            if (device_type == ExecutorDeviceType::GPU) {
+            if (device_type == ExecutorDeviceType::CUDA) {
               set_cuda_context(data_mgr, start);
             }
             strided_permutations[start] = (key_bytewidth == 4)

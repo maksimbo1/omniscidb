@@ -19,7 +19,7 @@
 
 #include <vector>
 
-enum class ExecutorDeviceType { CPU, GPU, L0 };
+enum class ExecutorDeviceType { CPU, CUDA, L0 };
 
 enum class ExecutorOptLevel { Default, LoopStrengthReduction, ReductionJIT };
 
@@ -50,7 +50,7 @@ struct CompilationOptions {
   }
 
   static CompilationOptions defaults(
-      const ExecutorDeviceType device_type = ExecutorDeviceType::GPU) {
+      const ExecutorDeviceType device_type = ExecutorDeviceType::CUDA) {
     return CompilationOptions{device_type,
                               true,
                               ExecutorOptLevel::Default,
@@ -61,6 +61,10 @@ struct CompilationOptions {
                               false};
   }
 };
+
+inline bool is_gpu(ExecutorDeviceType device_type) {
+  return device_type == ExecutorDeviceType::CUDA || device_type == ExecutorDeviceType::L0;
+}
 
 enum class ExecutorType { Native, Extern };
 

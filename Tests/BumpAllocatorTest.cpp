@@ -41,14 +41,14 @@ bool g_keep_data{false};
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !QR::get()->gpusPresent();
+  return device_type == ExecutorDeviceType::CUDA && !QR::get()->gpusPresent();
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
-  if (skip_tests(ExecutorDeviceType::GPU)) {                 \
+  if (skip_tests(ExecutorDeviceType::CUDA)) {                 \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
   }
 
@@ -143,7 +143,7 @@ TEST_F(LowGpuBufferMemory, OutOfMemory) {
   SKIP_NO_GPU();
 
   try {
-    run_multiple_agg("SELECT x FROM test WHERE x < 500;", ExecutorDeviceType::GPU);
+    run_multiple_agg("SELECT x FROM test WHERE x < 500;", ExecutorDeviceType::CUDA);
     ASSERT_TRUE(false) << "Expected query to throw exception";
   } catch (const std::exception& e) {
     ASSERT_EQ(
@@ -200,7 +200,7 @@ TEST_F(LowGpuBufferMemoryCpuRetry, OOMRetryOnCPU) {
 
   try {
     auto result_rows =
-        run_multiple_agg("SELECT x FROM test WHERE x < 500;", ExecutorDeviceType::GPU);
+        run_multiple_agg("SELECT x FROM test WHERE x < 500;", ExecutorDeviceType::CUDA);
     ASSERT_EQ(result_rows->rowCount(), size_t(row_count_per_gpu * g_num_gpus));
   } catch (const std::exception& e) {
     ASSERT_TRUE(false) << "Expected query to not throw exception. Query threw: "
@@ -252,7 +252,7 @@ TEST_F(MediumGpuBufferMemory, OutOfSlots) {
   SKIP_NO_GPU();
 
   try {
-    run_multiple_agg("SELECT x FROM test WHERE x < 5000;", ExecutorDeviceType::GPU);
+    run_multiple_agg("SELECT x FROM test WHERE x < 5000;", ExecutorDeviceType::CUDA);
     ASSERT_TRUE(false) << "Expected query to throw exception";
   } catch (const std::exception& e) {
     ASSERT_EQ(std::string(e.what()),

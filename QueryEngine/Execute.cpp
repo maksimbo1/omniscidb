@@ -646,7 +646,7 @@ std::vector<int8_t> Executor::serializeLiterals(
 }
 
 int Executor::deviceCount(const ExecutorDeviceType device_type) const {
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     const auto cuda_mgr = catalog_->getDataMgr().getCudaMgr();
     CHECK(cuda_mgr);
     return cuda_mgr->getDeviceCount();
@@ -657,7 +657,7 @@ int Executor::deviceCount(const ExecutorDeviceType device_type) const {
 
 int Executor::deviceCountForMemoryLevel(
     const Data_Namespace::MemoryLevel memory_level) const {
-  return memory_level == GPU_LEVEL ? deviceCount(ExecutorDeviceType::GPU)
+  return memory_level == GPU_LEVEL ? deviceCount(ExecutorDeviceType::CUDA)
                                    : deviceCount(ExecutorDeviceType::CPU);
 }
 
@@ -1049,7 +1049,7 @@ std::unordered_set<int> get_available_gpus(const Catalog_Namespace::Catalog& cat
 size_t get_context_count(const ExecutorDeviceType device_type,
                          const size_t cpu_count,
                          const size_t gpu_count) {
-  return device_type == ExecutorDeviceType::GPU ? gpu_count
+  return device_type == ExecutorDeviceType::CUDA ? gpu_count
                                                 : static_cast<size_t>(cpu_count);
 }
 
@@ -1102,7 +1102,7 @@ std::string get_table_name(const InputDescriptor& input_desc,
 
 inline size_t getDeviceBasedScanLimit(const ExecutorDeviceType device_type,
                                       const int device_count) {
-  if (device_type == ExecutorDeviceType::GPU) {
+  if (device_type == ExecutorDeviceType::CUDA) {
     return device_count * Executor::high_scan_limit;
   }
   return Executor::high_scan_limit;
@@ -1426,8 +1426,8 @@ std::ostream& operator<<(std::ostream& os, const ExecutorDeviceType& type) {
     case ExecutorDeviceType::CPU:
       os << "ExecutorDeviceType::CPU";
       break;
-    case ExecutorDeviceType::GPU:
-      os << "ExecutorDeviceType::GPU";
+    case ExecutorDeviceType::CUDA:
+      os << "ExecutorDeviceType::CUDA";
       break;
     case ExecutorDeviceType::L0:
       os << "ExecutorDeviceType::L0";
@@ -1472,7 +1472,7 @@ ResultSetPtr Executor::executeWorkUnitImpl(
     ColumnFetcher column_fetcher(this, column_cache);
     ScopeGuard scope_guard = [&column_fetcher, &device_type] {
       column_fetcher.freeLinearizedBuf();
-      if (device_type == ExecutorDeviceType::GPU) {
+      if (device_type == ExecutorDeviceType::CUDA) {
         column_fetcher.freeTemporaryCpuLinearizedIdxBuf();
       }
     };
@@ -1994,7 +1994,7 @@ ResultSetPtr Executor::collectAllDeviceResults(
     }
   }
   const auto shard_count =
-      device_type == ExecutorDeviceType::GPU
+      device_type == ExecutorDeviceType::CUDA
           ? GroupByAndAggregate::shard_count_for_top_groups(ra_exe_unit, *catalog_)
           : 0;
 
@@ -2182,7 +2182,7 @@ std::vector<std::unique_ptr<ExecutionKernel>> Executor::createKernels(
   QueryFragmentDescriptor fragment_descriptor(
       ra_exe_unit,
       table_infos,
-      query_comp_desc.getDeviceType() == ExecutorDeviceType::GPU
+      query_comp_desc.getDeviceType() == ExecutorDeviceType::CUDA
           ? catalog_->getDataMgr().getMemoryInfo(Data_Namespace::MemoryLevel::GPU_LEVEL)
           : std::vector<Data_Namespace::MemoryInfo>{},
       eo.gpu_input_mem_limit_percent,
@@ -2193,7 +2193,7 @@ std::vector<std::unique_ptr<ExecutionKernel>> Executor::createKernels(
   const bool uses_lazy_fetch =
       plan_state_->allow_lazy_fetch_ &&
       has_lazy_fetched_columns(getColLazyFetchInfo(ra_exe_unit.target_exprs));
-  const bool use_multifrag_kernel = (device_type == ExecutorDeviceType::GPU) &&
+  const bool use_multifrag_kernel = (device_type == ExecutorDeviceType::CUDA) &&
                                     eo.allow_multifrag && (!uses_lazy_fetch || is_agg);
   const auto device_count = deviceCount(device_type);
   CHECK_GT(device_count, 0);
@@ -2229,7 +2229,7 @@ std::vector<std::unique_ptr<ExecutionKernel>> Executor::createKernels(
                                                    const int64_t rowid_lookup_key) {
       execution_kernels.emplace_back(
           std::make_unique<ExecutionKernel>(ra_exe_unit,
-                                            ExecutorDeviceType::GPU,
+                                            ExecutorDeviceType::CUDA,
                                             device_id,
                                             eo,
                                             column_fetcher,
@@ -2372,7 +2372,7 @@ bool Executor::skipFragmentPair(
         inner_table_id_to_join_condition,
     const RelAlgExecutionUnit& ra_exe_unit,
     const ExecutorDeviceType device_type) {
-  if (device_type != ExecutorDeviceType::GPU) {
+  if (device_type != ExecutorDeviceType::CUDA) {
     return false;
   }
   CHECK(table_idx >= 0 &&
@@ -2989,7 +2989,7 @@ int32_t Executor::executePlanWithoutGroupBy(
     render_allocator_map_ptr = render_info->render_allocator_map_ptr.get();
   }
 
-  int32_t error_code = device_type == ExecutorDeviceType::GPU ? 0 : start_rowid;
+  int32_t error_code = device_type == ExecutorDeviceType::CUDA ? 0 : start_rowid;
   std::vector<int64_t*> out_vec;
   const auto hoist_buf = serializeLiterals(compilation_result.literal_values, device_id);
   const auto join_hash_table_ptrs = getJoinHashTablePtrs(device_type, device_id);
@@ -3070,7 +3070,7 @@ int32_t Executor::executePlanWithoutGroupBy(
   std::vector<int64_t> reduced_outs;
   const auto num_frags = col_buffers.size();
   const size_t entry_count =
-      device_type == ExecutorDeviceType::GPU
+      device_type == ExecutorDeviceType::CUDA
           ? (compilation_result.gpu_smem_context.isSharedMemoryUsed()
                  ? 1
                  : blockSize() * gridSize() * num_frags)
@@ -3197,7 +3197,7 @@ int32_t Executor::executePlanWithGroupBy(
   // 2. Resize on overflow.
   // 3. Optimize runtime.
   auto hoist_buf = serializeLiterals(compilation_result.literal_values, device_id);
-  int32_t error_code = device_type == ExecutorDeviceType::GPU ? 0 : start_rowid;
+  int32_t error_code = device_type == ExecutorDeviceType::CUDA ? 0 : start_rowid;
   const auto join_hash_table_ptrs = getJoinHashTablePtrs(device_type, device_id);
   if (allow_runtime_interrupt) {
     bool isInterrupted = false;
@@ -3351,7 +3351,7 @@ std::vector<int8_t*> Executor::getJoinHashTablePtrs(const ExecutorDeviceType dev
       return {};
     }
     table_ptrs.push_back(hash_table->getJoinHashBuffer(
-        device_type, device_type == ExecutorDeviceType::GPU ? device_id : 0));
+        device_type, device_type == ExecutorDeviceType::CUDA ? device_id : 0));
   }
   return table_ptrs;
 }

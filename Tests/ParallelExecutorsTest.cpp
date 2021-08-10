@@ -42,15 +42,15 @@ using namespace TestHelpers;
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -201,9 +201,9 @@ class SingleTableTestEnv : public ::testing::Test {
   void SetUp() override {
     build_table("test_parallel");
 
-    if (!skip_tests(ExecutorDeviceType::GPU)) {
+    if (!skip_tests(ExecutorDeviceType::CUDA)) {
       // warm up the PTX JIT
-      run_simple_agg("SELECT COUNT(*) FROM test_parallel;", ExecutorDeviceType::GPU);
+      run_simple_agg("SELECT COUNT(*) FROM test_parallel;", ExecutorDeviceType::CUDA);
     }
   }
 
@@ -215,7 +215,7 @@ class SingleTableTestEnv : public ::testing::Test {
 };
 
 TEST_F(SingleTableTestEnv, AllTables) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     for (size_t i = 1; i <= g_max_num_executors; i *= 2) {
@@ -243,9 +243,9 @@ class MultiTableTestEnv : public ::testing::Test {
       build_table("test_parallel_" + std::to_string(i));
     }
 
-    if (!skip_tests(ExecutorDeviceType::GPU)) {
+    if (!skip_tests(ExecutorDeviceType::CUDA)) {
       // warm up the PTX JIT
-      run_simple_agg("SELECT COUNT(*) FROM test_parallel_0;", ExecutorDeviceType::GPU);
+      run_simple_agg("SELECT COUNT(*) FROM test_parallel_0;", ExecutorDeviceType::CUDA);
     }
   }
 
@@ -260,7 +260,7 @@ class MultiTableTestEnv : public ::testing::Test {
 };
 
 TEST_F(MultiTableTestEnv, AllTables) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
     for (size_t i = 1; i <= g_max_num_executors; i *= 2) {
       QR::get()->resizeDispatchQueue(i);
@@ -292,9 +292,9 @@ class UpdateDeleteTestEnv : public ::testing::Test {
       build_table("test_parallel_" + std::to_string(i));
     }
 
-    if (!skip_tests(ExecutorDeviceType::GPU)) {
+    if (!skip_tests(ExecutorDeviceType::CUDA)) {
       // warm up the PTX JIT
-      run_simple_agg("SELECT COUNT(*) FROM test_parallel_0;", ExecutorDeviceType::GPU);
+      run_simple_agg("SELECT COUNT(*) FROM test_parallel_0;", ExecutorDeviceType::CUDA);
     }
   }
 
@@ -315,7 +315,7 @@ TEST_F(UpdateDeleteTestEnv, Delete_OneTable) {
   const size_t iterations = 5;
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     for (size_t i = 0; i < iterations; i++) {
@@ -363,7 +363,7 @@ TEST_F(UpdateDeleteTestEnv, Delete_OneTable) {
 TEST_F(UpdateDeleteTestEnv, Delete_TwoTables) {
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     std::vector<std::future<void>> worker_threads;
@@ -406,7 +406,7 @@ TEST_F(UpdateDeleteTestEnv, Update_OneTable) {
   const size_t iterations = 5;
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     for (size_t i = 0; i < iterations; i++) {
@@ -456,7 +456,7 @@ TEST_F(UpdateDeleteTestEnv, Update_OneTableVarlen) {
   const size_t iterations = 5;
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     for (size_t i = 0; i < iterations; i++) {
@@ -510,7 +510,7 @@ TEST_F(UpdateDeleteTestEnv, Update_OneTableVarlen) {
 TEST_F(UpdateDeleteTestEnv, Update_TwoTables) {
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     std::vector<std::future<void>> worker_threads;
@@ -553,7 +553,7 @@ TEST_F(UpdateDeleteTestEnv, Update_TwoTables) {
 TEST_F(UpdateDeleteTestEnv, UpdateDelete_TwoTables) {
   QR::get()->resizeDispatchQueue(g_max_num_executors);
 
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     std::vector<std::future<void>> worker_threads;

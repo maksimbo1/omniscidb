@@ -88,7 +88,7 @@ llvm::Value* CodeGenerator::codegen(const Analyzer::InIntegerSet* in_integer_set
   auto in_vals_bitmap = std::make_unique<InValuesBitmap>(
       in_integer_set->get_value_list(),
       needle_null_val,
-      co.device_type == ExecutorDeviceType::GPU ? Data_Namespace::GPU_LEVEL
+      co.device_type == ExecutorDeviceType::CUDA ? Data_Namespace::GPU_LEVEL
                                                 : Data_Namespace::CPU_LEVEL,
       executor()->deviceCount(co.device_type),
       &executor()->getCatalog()->getDataMgr());
@@ -192,7 +192,7 @@ std::unique_ptr<InValuesBitmap> CodeGenerator::createInValuesBitmap(
     try {
       return std::make_unique<InValuesBitmap>(values,
                                               needle_null_val,
-                                              co.device_type == ExecutorDeviceType::GPU
+                                              co.device_type == ExecutorDeviceType::CUDA
                                                   ? Data_Namespace::GPU_LEVEL
                                                   : Data_Namespace::CPU_LEVEL,
                                               executor()->deviceCount(co.device_type),

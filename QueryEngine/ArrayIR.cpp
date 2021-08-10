@@ -145,7 +145,7 @@ std::vector<llvm::Value*> CodeGenerator::codegenArrayExpr(
   if (array_expr->isLocalAlloc()) {
     allocated_target_buffer = ir_builder.CreateAlloca(array_type);
   } else {
-    if (co.device_type == ExecutorDeviceType::GPU) {
+    if (co.device_type == ExecutorDeviceType::CUDA) {
       throw QueryMustRunOnCpu();
     }
 

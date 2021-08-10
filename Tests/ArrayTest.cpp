@@ -28,7 +28,7 @@
 
 #define SKIP_NO_GPU()                                        \
   if (skip_tests(dt)) {                                      \
-    CHECK(dt == ExecutorDeviceType::GPU);                    \
+    CHECK(dt == ExecutorDeviceType::CUDA);                    \
     LOG(WARNING) << "GPU not available, skipping GPU tests"; \
     continue;                                                \
   }
@@ -52,9 +52,9 @@ std::shared_ptr<ResultSet> run_multiple_agg(const std::string& query_str,
 
 bool skip_tests(const ExecutorDeviceType device_type) {
 #ifdef HAVE_CUDA
-  return device_type == ExecutorDeviceType::GPU && !(QR::get()->gpusPresent());
+  return device_type == ExecutorDeviceType::CUDA && !(QR::get()->gpusPresent());
 #else
-  return device_type == ExecutorDeviceType::GPU;
+  return device_type == ExecutorDeviceType::CUDA;
 #endif
 }
 
@@ -210,7 +210,7 @@ class ArrayExtOpsEnv : public ::testing::Test {
 };
 
 TEST_F(ArrayExtOpsEnv, ArrayAppendInteger) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     auto check_row_result = [](const auto& crt_row, const auto& expected) {
@@ -268,7 +268,7 @@ TEST_F(ArrayExtOpsEnv, ArrayAppendInteger) {
 }
 
 TEST_F(ArrayExtOpsEnv, ArrayAppendBool) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
     auto check_row_result = [](const auto& crt_row, const auto& expected) {
       compare_array(crt_row[0], expected);
@@ -298,7 +298,7 @@ TEST_F(ArrayExtOpsEnv, ArrayAppendBool) {
 }
 
 TEST_F(ArrayExtOpsEnv, ArrayAppendDouble) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
     auto check_row_result = [](const auto& crt_row, const auto& expected) {
       compare_array(crt_row[0], expected);
@@ -326,7 +326,7 @@ TEST_F(ArrayExtOpsEnv, ArrayAppendDouble) {
 }
 
 TEST_F(ArrayExtOpsEnv, ArrayAppendFloat) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
     auto check_row_result = [](const auto& crt_row, const auto& expected) {
       compare_array(crt_row[0], expected);
@@ -354,7 +354,7 @@ TEST_F(ArrayExtOpsEnv, ArrayAppendFloat) {
 }
 
 TEST_F(ArrayExtOpsEnv, ArrayAppendDowncast) {
-  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+  for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
     SKIP_NO_GPU();
 
     // unsupported downcast
@@ -814,7 +814,7 @@ TEST_F(MultiFragArrayJoinTest, IndexedArrayJoin) {
     std::vector<std::string> text_array_types{"txv", "txve", "txf", "txfe"};
     std::vector<std::string> bool_types{"boolf", "boolv"};
     auto run_tests = [](const std::vector<std::string> col_types) {
-      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
         SKIP_NO_GPU();
         for (const auto& col_name : col_types) {
           std::ostringstream sq, q1;
@@ -855,7 +855,7 @@ TEST_F(MultiFragArrayJoinTest, IndexedArrayJoin) {
         "txv", "txve"};  // skip txf text[3] / txfe text[3] encoding dict (32)
     std::vector<std::string> bool_types{"boolf", "boolv"};
     auto run_tests = [](const std::vector<std::string> col_types) {
-      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
         SKIP_NO_GPU();
         for (const auto& col_name : col_types) {
           std::ostringstream sq, q1;
@@ -1098,7 +1098,7 @@ TEST_F(MultiFragArrayParallelLinearizationTest, IndexedArrayJoin) {
   // case 1. non_null
   {
     auto run_tests = [](const std::vector<std::string> col_types) {
-      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
         SKIP_NO_GPU();
         for (const auto& col_name : col_types) {
           std::ostringstream sq, q1;
@@ -1123,7 +1123,7 @@ TEST_F(MultiFragArrayParallelLinearizationTest, IndexedArrayJoin) {
   // case 2-a. nullable having first row of each frag is null row
   {
     auto run_tests = [](const std::vector<std::string> col_types) {
-      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
         SKIP_NO_GPU();
         for (const auto& col_name : col_types) {
           std::ostringstream sq, q1;
@@ -1148,7 +1148,7 @@ TEST_F(MultiFragArrayParallelLinearizationTest, IndexedArrayJoin) {
   // case 2-b. nullable having first row of each frag is non-null row
   {
     auto run_tests = [](const std::vector<std::string> col_types) {
-      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::GPU}) {
+      for (auto dt : {ExecutorDeviceType::CPU, ExecutorDeviceType::CUDA}) {
         SKIP_NO_GPU();
         for (const auto& col_name : col_types) {
           std::ostringstream sq, q1;
