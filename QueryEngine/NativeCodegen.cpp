@@ -2722,8 +2722,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
                                   co.device_type,
                                   cuda_mgr ? this->blockSize() : 1,
                                   cuda_mgr ? this->numBlocksPerMP() : 1);
-  std::cerr << "gpu_shared_mem_optimization is "
-            << (gpu_shared_mem_optimization ? "on" : "off") << std::endl;
   if (gpu_shared_mem_optimization) {
     // disable interleaved bins optimization on the GPU
     query_mem_desc->setHasInterleavedBinsOnGpu(false);
@@ -2811,7 +2809,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   const auto agg_slot_count = ra_exe_unit.estimator ? size_t(1) : agg_fnames.size();
 
   const bool is_group_by{query_mem_desc->isGroupBy()};
-  std::cerr << "Is group by? " << is_group_by << std::endl;
   auto [query_func, row_func_call] = is_group_by
                                          ? query_group_by_template(cgen_state_->module_,
                                                                    co.hoist_literals,
@@ -2977,7 +2974,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   if (((co.device_type == ExecutorDeviceType::GPU) ||
        (co.device_type == ExecutorDeviceType::L0)) &&
       eo.allow_multifrag) {
-    std::cerr << "inserting errors" << std::endl;
     insertErrorCodeChecker(multifrag_query_func, co, eo.allow_runtime_query_interrupt);
   }
 
@@ -3045,26 +3041,12 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   LOG(IR) << serialize_llvm_object(cgen_state_->module_) << "\nEnd of IR";
 #endif
 
-  std::cerr << "Generated llvm ir" << std::endl;
-  std::cerr << serialize_llvm_object(cgen_state_->row_func_) << "\nEnd of IR\n\n\n"
-            << std::endl;
-  std::cerr << "Multifrag query func ir: " << std::endl;
-  std::cerr << serialize_llvm_object(multifrag_query_func)
-            << "\nEnd of Multifrag func\n\n"
-            << std::endl;
-
-  std::cerr << "Query template ir:" << std::endl;
-  std::cerr << serialize_llvm_object(query_func) << "\nEnd of query func\n\n"
-            << std::endl;
-
   // Run some basic validation checks on the LLVM IR before code is generated below.
   verify_function_ir(cgen_state_->row_func_);
   verify_function_ir(multifrag_query_func);
   verify_function_ir(query_func);
-  std::cerr << "row funciton is good" << std::endl;
   if (cgen_state_->filter_func_) {
     verify_function_ir(cgen_state_->filter_func_);
-    std::cerr << "filter funciton is good" << std::endl;
   }
 
   // Generate final native code from the LLVM IR.
@@ -3091,7 +3073,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
       LOG(FATAL) << "Invalid device type";
       return {};
   }
-  std::cerr << "Compiled!" << std::endl;
   return std::make_tuple(CompilationResult{compilation_context,
                                            cgen_state_->getLiterals(),
                                            output_columnar,
