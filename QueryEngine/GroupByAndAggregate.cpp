@@ -871,8 +871,7 @@ bool GroupByAndAggregate::codegen(llvm::Value* filter_result,
         LL_BUILDER.CreateStore(LL_INT(int32_t(1)), crt_matched);
         auto total_matched_ptr = get_arg_by_name(ROW_FUNC, "total_matched");
         llvm::Value* old_total_matched_val{nullptr};
-        if (co.device_type == ExecutorDeviceType::GPU ||
-            co.device_type == ExecutorDeviceType::L0) {
+        if (is_gpu_device(co.device_type)) {
           old_total_matched_val =
               LL_BUILDER.CreateAtomicRMW(llvm::AtomicRMWInst::Add,
                                          total_matched_ptr,
