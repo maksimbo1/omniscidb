@@ -1266,18 +1266,18 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
   // todo: add helper funcs
   // todo: add udf funcs
 
-  llvm::errs() << "func: " << (func ? func->getName() : "null") << "\n";
-  llvm::errs() << "wrapper func: " << (wrapper_func ? wrapper_func->getName() : "null")
-               << "\n";
-
   std::ostringstream ss;
   std::string err;
   auto success = writeSpirv(module, opts, ss, err);
+
+#ifndef NDEBUG
   if (!success) {
     llvm::errs() << "Spirv translation failed with error: " << err << "\n";
   } else {
     llvm::errs() << "Spirv tranlsation success.\n";
   }
+#endif
+
   CHECK(success);
 
   const auto func_name = wrapper_func->getName().str();
