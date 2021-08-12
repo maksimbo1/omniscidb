@@ -1455,8 +1455,6 @@ ResultSetPtr Executor::executeWorkUnitImpl(
   INJECT_TIMER(Exec_executeWorkUnit);
   const auto [ra_exe_unit, deleted_cols_map] = addDeletedColumn(ra_exe_unit_in, co);
   const auto device_type = getDeviceTypeForTargets(ra_exe_unit, co.device_type);
-  std::cerr << "USING DEVICE TYPE: " << device_type << "; is_agg = " << is_agg
-            << std::endl;
   CHECK(!query_infos.empty());
   if (!max_groups_buffer_entry_guess) {
     // The query has failed the first execution attempt because of running out
@@ -2614,7 +2612,8 @@ FetchResult Executor::fetchChunks(
       CHECK_LT(frag_id, fragments->size());
       auto memory_level_for_column = memory_level;
       // if (plan_state_->columns_to_fetch_.find(
-      //         std::make_pair(col_id->getScanDesc().getTableId(), col_id->getColId())) ==
+      //         std::make_pair(col_id->getScanDesc().getTableId(), col_id->getColId()))
+      //         ==
       //     plan_state_->columns_to_fetch_.end()) {
       //   memory_level_for_column = Data_Namespace::CPU_LEVEL;
       // }
@@ -3008,7 +3007,7 @@ int32_t Executor::executePlanWithoutGroupBy(
   if (g_enable_dynamic_watchdog && interrupted_.load()) {
     throw QueryExecutionError(ERR_INTERRUPTED);
   }
-  // TODO
+
   if (device_type == ExecutorDeviceType::CPU) {
     auto cpu_generated_code = std::dynamic_pointer_cast<CpuCompilationContext>(
         compilation_result.generated_code);
