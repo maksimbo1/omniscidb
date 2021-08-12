@@ -648,11 +648,6 @@ std::shared_ptr<ExecutionResult> run_select_query_with_filter_push_down(
 std::shared_ptr<ExecutionResult> QueryRunner::runSelectQuery(const std::string& query_str,
                                                              CompilationOptions co,
                                                              ExecutionOptions eo) {
-  std::cerr << "Device type is "
-            << ((co.device_type == ExecutorDeviceType::L0)
-                    ? "L0"
-                    : ((co.device_type == ExecutorDeviceType::GPU) ? "GPU" : "CPU"));
-  std::cerr << std::endl;
   CHECK(session_info_);
   CHECK(!Catalog_Namespace::SysCatalog::instance().isAggregator());
   auto query_state = create_query_state(session_info_, query_str);
