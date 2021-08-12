@@ -452,7 +452,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" OR NOT LLVM_LIB)
     set_target_properties(${lib} PROPERTIES INTERFACE_LINK_LIBRARIES "${interface_libs}")
   endforeach()
 
-  # list(APPEND llvm_libs ${CURSES_NCURSES_LIBRARY})
+  list(APPEND llvm_libs ${CURSES_NCURSES_LIBRARY})
 else()
   if(NOT CLANG_LIB)
     message(FATAL_ERROR "Could not find CLANG library.")

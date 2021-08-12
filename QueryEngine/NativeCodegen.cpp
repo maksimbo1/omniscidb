@@ -1515,11 +1515,10 @@ bool CodeGenerator::alwaysCloneRuntimeFunction(const llvm::Function* func) {
          func->getName() == "init_shared_mem_nop" || func->getName() == "write_back_nop";
 }
 
-llvm::Module* read_template_module(llvm::LLVMContext& context) {
+llvm::Module* read_module(llvm::LLVMContext& context, const std::string& path) {
   llvm::SMDiagnostic err;
 
-  auto buffer_or_error = llvm::MemoryBuffer::getFile(omnisci::get_root_abs_path() +
-                                                     "/QueryEngine/RuntimeFunctions.bc");
+  auto buffer_or_error = llvm::MemoryBuffer::getFile(omnisci::get_root_abs_path() + path);
   CHECK(!buffer_or_error.getError()) << "root path=" << omnisci::get_root_abs_path();
   llvm::MemoryBuffer* buffer = buffer_or_error.get().get();
 
@@ -1531,21 +1530,13 @@ llvm::Module* read_template_module(llvm::LLVMContext& context) {
   return module;
 }
 
+llvm::Module* read_template_module(llvm::LLVMContext& context) {
+  return read_module(context, "/QueryEngine/RuntimeFunctions.bc");
+}
+
 #ifdef HAVE_L0
 llvm::Module* read_l0_rt_module(llvm::LLVMContext& context) {
-  llvm::SMDiagnostic err;
-
-  auto buffer_or_error = llvm::MemoryBuffer::getFile(omnisci::get_root_abs_path() +
-                                                     "/QueryEngine/l0_mapd_rt.bc");
-  CHECK(!buffer_or_error.getError()) << "root path=" << omnisci::get_root_abs_path();
-  llvm::MemoryBuffer* buffer = buffer_or_error.get().get();
-
-  auto owner = llvm::parseBitcodeFile(buffer->getMemBufferRef(), context);
-  CHECK(!owner.takeError());
-  auto module = owner.get().release();
-  CHECK(module);
-
-  return module;
+  return read_module(context, "/QueryEngine/l0_mapd_rt.bc");
 }
 #endif
 
@@ -1580,19 +1571,7 @@ llvm::Module* read_libdevice_module(llvm::LLVMContext& context) {
 
 #ifdef ENABLE_GEOS
 llvm::Module* read_geos_module(llvm::LLVMContext& context) {
-  llvm::SMDiagnostic err;
-
-  auto buffer_or_error = llvm::MemoryBuffer::getFile(omnisci::get_root_abs_path() +
-                                                     "/QueryEngine/GeosRuntime.bc");
-  CHECK(!buffer_or_error.getError()) << "root path=" << omnisci::get_root_abs_path();
-  llvm::MemoryBuffer* buffer = buffer_or_error.get().get();
-
-  auto owner = llvm::parseBitcodeFile(buffer->getMemBufferRef(), context);
-  CHECK(!owner.takeError());
-  auto module = owner.get().release();
-  CHECK(module);
-
-  return module;
+  return read_module(context, "/QueryEngine/GeosRuntime.bc");
 }
 #endif
 
