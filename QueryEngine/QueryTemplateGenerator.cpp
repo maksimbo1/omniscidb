@@ -205,7 +205,6 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
     const CompilationOptions& co,
     const bool is_estimate_query,
     const GpuSharedMemoryContext& gpu_smem_context) {
-  std::cerr << "Building non-group by template!" << std::endl;
   using namespace llvm;
   auto calling_conv = (co.device_type == ExecutorDeviceType::L0) ? CallingConv::SPIR_FUNC
                                                                  : CallingConv::C;
@@ -552,9 +551,11 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   pos_inc_pre->replaceAllUsesWith(pos_inc);
   delete pos_inc_pre;
 
+#ifndef NDEBUG
   std::error_code ec;
   raw_fd_ostream query_template_dump("query.ll", ec);
   mod->print(query_template_dump, nullptr);
+#endif
 
   llvm::raw_os_ostream output(std::cerr);
   if (verifyFunction(*query_func_ptr, &output)) {
@@ -572,7 +573,6 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
     const ExecutorDeviceType device_type,
     const bool check_scan_limit,
     const GpuSharedMemoryContext& gpu_smem_context) {
-  std::cerr << "Building group by template!" << std::endl;
   if (gpu_smem_context.isSharedMemoryUsed()) {
     CHECK(device_type == ExecutorDeviceType::GPU);
   }
@@ -590,7 +590,6 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   auto func_row_process =
       row_process<Attributes>(mod, 0, hoist_literals, calling_conv, addr_space);
   CHECK(func_row_process);
-  std::cerr << "row func: " << serialize_llvm_object(func_row_process) << std::endl;
   auto func_init_shared_mem = gpu_smem_context.isSharedMemoryUsed()
                                   ? mod->getFunction("init_shared_mem")
                                   : mod->getFunction("init_shared_mem_nop");
