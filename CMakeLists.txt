@@ -442,15 +442,15 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" OR NOT LLVM_LIB)
       clangRewrite
       clangRewriteFrontend)
 
-  # # LLVMSupport explicitly lists tinfo in its INTERFACE_LINK_LIBRARIES, even
-  # # though we provide it in our build of ncurses. Since LLVMSupport is listed
-  # # as a requirement for other llvm libs, we need to walk through the entire
-  # # list in order to remove all instances of tinfo.
-  # foreach(lib ${llvm_libs})
-  #   get_target_property(interface_libs ${lib} INTERFACE_LINK_LIBRARIES)
-  #   list(REMOVE_ITEM interface_libs tinfo z rt pthread -lpthread m dl)
-  #   set_target_properties(${lib} PROPERTIES INTERFACE_LINK_LIBRARIES "${interface_libs}")
-  # endforeach()
+  # LLVMSupport explicitly lists tinfo in its INTERFACE_LINK_LIBRARIES, even
+  # though we provide it in our build of ncurses. Since LLVMSupport is listed
+  # as a requirement for other llvm libs, we need to walk through the entire
+  # list in order to remove all instances of tinfo.
+  foreach(lib ${llvm_libs})
+    get_target_property(interface_libs ${lib} INTERFACE_LINK_LIBRARIES)
+    list(REMOVE_ITEM interface_libs tinfo z rt pthread -lpthread m dl)
+    set_target_properties(${lib} PROPERTIES INTERFACE_LINK_LIBRARIES "${interface_libs}")
+  endforeach()
 
   # list(APPEND llvm_libs ${CURSES_NCURSES_LIBRARY})
 else()
