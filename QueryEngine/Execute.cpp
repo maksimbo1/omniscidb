@@ -2611,12 +2611,11 @@ FetchResult Executor::fetchChunks(
       }
       CHECK_LT(frag_id, fragments->size());
       auto memory_level_for_column = memory_level;
-      // if (plan_state_->columns_to_fetch_.find(
-      //         std::make_pair(col_id->getScanDesc().getTableId(), col_id->getColId()))
-      //         ==
-      //     plan_state_->columns_to_fetch_.end()) {
-      //   memory_level_for_column = Data_Namespace::CPU_LEVEL;
-      // }
+      if (plan_state_->columns_to_fetch_.find(
+              std::make_pair(col_id->getScanDesc().getTableId(), col_id->getColId())) ==
+          plan_state_->columns_to_fetch_.end()) {
+        memory_level_for_column = Data_Namespace::CPU_LEVEL;
+      }
       if (col_id->getScanDesc().getSourceType() == InputSourceType::RESULT) {
         frag_col_buffers[it->second] =
             column_fetcher.getResultSetColumn(col_id.get(),
