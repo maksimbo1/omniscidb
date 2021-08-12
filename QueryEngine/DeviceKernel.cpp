@@ -190,10 +190,6 @@ class L0Kernel : public DeviceKernel {
     CHECK(kernel);
     CHECK(device);
 
-    std::cerr << "I'm launching!" << std::endl;
-
-    // todo: allocate buffer for params and set it as kernel argument
-
     auto q = device->command_queue();
     auto q_list = device->create_command_list();
     kernel->group_size() = {gridDimX, gridDimY, gridDimZ};
