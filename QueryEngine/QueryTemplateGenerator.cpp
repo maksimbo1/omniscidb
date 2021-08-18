@@ -338,18 +338,17 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   auto bb_exit = BasicBlock::Create(mod->getContext(), ".exit", query_func_ptr, 0);
 
   // Block  (.entry)
-  std::vector<Value*> result_ptr_vec;  // todo: remove
-  std::vector<Value*> result_ptr_cast_vec;
+  std::vector<Value*> result_ptr_vec;
   llvm::CallInst* smem_output_buffer{nullptr};
   if (!is_estimate_query) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
-      auto result_ptr = new AllocaInst(i64_type, 0, "result", bb_entry);
-      result_ptr->setAlignment(LLVM_ALIGN(8));
-
-      auto result_ptr_cast =
-          new AddrSpaceCastInst(result_ptr, pi64_type, "result.cst", bb_entry);
+      auto result_ptr_alloc = new AllocaInst(i64_type, 0, "result", bb_entry);
+      result_ptr_alloc->setAlignment(LLVM_ALIGN(8));
+      llvm::Value* result_ptr = result_ptr_alloc;
+      if (co.device_type == ExecutorDeviceType::L0) {
+        result_ptr = new AddrSpaceCastInst(result_ptr, pi64_type, "result.cst", bb_entry);
+      }
       result_ptr_vec.push_back(result_ptr);
-      result_ptr_cast_vec.push_back(result_ptr_cast);
     }
     if (gpu_smem_context.isSharedMemoryUsed()) {
       auto init_smem_func = mod->getFunction("init_shared_mem");
@@ -383,8 +382,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
           get_pointer_element_type(agg_init_gep), agg_init_gep, "", false, bb_entry);
       agg_init_val->setAlignment(LLVM_ALIGN(8));
       agg_init_val_vec.push_back(agg_init_val);
-      auto init_val_st =
-          new StoreInst(agg_init_val, result_ptr_cast_vec[i], false, bb_entry);
+      auto init_val_st = new StoreInst(agg_init_val, result_ptr_vec[i], false, bb_entry);
       init_val_st->setAlignment(LLVM_ALIGN(8));
     }
   }
@@ -427,7 +425,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
 
   std::vector<Value*> row_process_params;
   row_process_params.insert(
-      row_process_params.end(), result_ptr_cast_vec.begin(), result_ptr_cast_vec.end());
+      row_process_params.end(), result_ptr_vec.begin(), result_ptr_vec.end());
   if (is_estimate_query) {
     row_process_params.push_back(
         new LoadInst(get_pointer_element_type(out), out, "", false, bb_forbody));
@@ -457,8 +455,8 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_template_impl(
   std::vector<Instruction*> result_vec_pre;
   if (!is_estimate_query) {
     for (size_t i = 0; i < aggr_col_count; ++i) {
-      auto result = new LoadInst(get_pointer_element_type(result_ptr_cast_vec[i]),
-                                 result_ptr_cast_vec[i],
+      auto result = new LoadInst(get_pointer_element_type(result_ptr_vec[i]),
+                                 result_ptr_vec[i],
                                  ".pre.result",
                                  false,
                                  bb_crit_edge);
@@ -734,12 +732,17 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
       get_pointer_element_type(max_matched_ptr), max_matched_ptr, "", false, bb_entry);
   max_matched->setAlignment(LLVM_ALIGN(8));
 
-  auto crt_matched_ptr = new AllocaInst(i32_type, 0, "crt_matched", bb_entry);
-  auto crt_matched_cast_ptr =
-      new AddrSpaceCastInst(crt_matched_ptr, pi32_type, "crt_matched.cst", bb_entry);
-  auto old_total_matched_ptr = new AllocaInst(i32_type, 0, "old_total_matched", bb_entry);
-  auto old_total_matched_cast_ptr = new AddrSpaceCastInst(
-      old_total_matched_ptr, pi32_type, "old_total_matched.cst", bb_entry);
+  llvm::Value* crt_matched_ptr = new AllocaInst(i32_type, 0, "crt_matched", bb_entry);
+  if (device_type == ExecutorDeviceType::L0) {
+    crt_matched_ptr =
+        new AddrSpaceCastInst(crt_matched_ptr, pi32_type, "crt_matched.cst", bb_entry);
+  }
+  llvm::Value* old_total_matched_ptr =
+      new AllocaInst(i32_type, 0, "old_total_matched", bb_entry);
+  if (device_type == ExecutorDeviceType::L0) {
+    old_total_matched_ptr = new AddrSpaceCastInst(
+        old_total_matched_ptr, pi32_type, "old_total_matched.cst", bb_entry);
+  }
   CallInst* pos_start = CallInst::Create(func_pos_start, "", bb_entry);
   pos_start->setCallingConv(calling_conv);
   pos_start->setTailCall(true);
@@ -794,9 +797,9 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
 
   std::vector<Value*> row_process_params;
   row_process_params.push_back(result_buffer);
-  row_process_params.push_back(crt_matched_cast_ptr);
+  row_process_params.push_back(crt_matched_ptr);
   row_process_params.push_back(total_matched);
-  row_process_params.push_back(old_total_matched_cast_ptr);
+  row_process_params.push_back(old_total_matched_ptr);
   row_process_params.push_back(max_matched_ptr);
   row_process_params.push_back(agg_init_val);
   row_process_params.push_back(pos);
@@ -808,7 +811,7 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   }
   if (check_scan_limit) {
     new StoreInst(ConstantInt::get(IntegerType::get(mod->getContext(), 32), 0),
-                  crt_matched_cast_ptr,
+                  crt_matched_ptr,
                   bb_forbody);
   }
   CallInst* row_process =
@@ -833,16 +836,16 @@ std::tuple<llvm::Function*, llvm::CallInst*> query_group_by_template_impl(
   ICmpInst* loop_or_exit =
       new ICmpInst(*bb_forbody, ICmpInst::ICMP_SLT, pos_inc, row_count, "");
   if (check_scan_limit) {
-    auto crt_matched = new LoadInst(get_pointer_element_type(crt_matched_cast_ptr),
-                                    crt_matched_cast_ptr,
+    auto crt_matched = new LoadInst(get_pointer_element_type(crt_matched_ptr),
+                                    crt_matched_ptr,
                                     "crt_matched",
                                     false,
                                     bb_forbody);
     auto filter_match = BasicBlock::Create(
         mod->getContext(), "filter_match", query_func_ptr, bb_crit_edge);
     llvm::Value* new_total_matched =
-        new LoadInst(get_pointer_element_type(old_total_matched_cast_ptr),
-                     old_total_matched_cast_ptr,
+        new LoadInst(get_pointer_element_type(old_total_matched_ptr),
+                     old_total_matched_ptr,
                      "",
                      false,
                      filter_match);

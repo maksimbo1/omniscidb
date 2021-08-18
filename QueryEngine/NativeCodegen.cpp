@@ -21,6 +21,7 @@
 #include "LLVMFunctionAttributesUtil.h"
 #include "OutputBufferInitialization.h"
 #include "QueryTemplateGenerator.h"
+#include "RemoveAddrSpacesPass.h"
 
 #include "CudaMgr/CudaMgr.h"
 #include "OSDependent/omnisci_path.h"
@@ -1224,26 +1225,10 @@ std::shared_ptr<L0CompilationContext> CodeGenerator::generateNativeL0Code(
     }
   }
 
-#ifndef NDEBUG
-  {
-    llvm::errs() << "PRIOR OPTIMIZATION -----\n";
-    llvm::errs() << *module;
-    llvm::errs() << "\nPRIOR OPTIMIZATION END -----\n";
-  }
-#endif
-
   auto pass_manager_builder = llvm::PassManagerBuilder();
   llvm::legacy::PassManager PM;
   pass_manager_builder.populateModulePassManager(PM);
   optimize_ir(func, module, PM, live_funcs, co);
-
-#ifndef NDEBUG
-  {
-    llvm::errs() << "AFTER OPTIMIZATION -----\n";
-    llvm::errs() << *module;
-    llvm::errs() << "\nAFTER OPTIMIZATION END -----\n";
-  }
-#endif
 
   module->setTargetTriple("spir64-unknown-unknown");
 
@@ -2491,7 +2476,11 @@ bool is_gpu_shared_mem_supported(const QueryMemoryDescriptor* query_mem_desc_ptr
                                  const ExecutorDeviceType device_type,
                                  const unsigned gpu_blocksize,
                                  const unsigned num_blocks_per_mp) {
-  if (is_gpu(device_type)) {
+  if (!is_gpu(device_type)) {
+    return false;
+  }
+  if (device_type == ExecutorDeviceType::L0) {
+    // TODO(L0): uncomment once shared memory support would be added to L0
     return false;
   }
   if (query_mem_desc_ptr->didOutputColumnar()) {
@@ -2822,6 +2811,16 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
   }
 
   cgen_state_->module_ = rt_module_copy.release();
+
+  if (co.device_type != ExecutorDeviceType::L0) {
+    llvm::legacy::PassManager pass_manager;
+    pass_manager.add(createSortedPrintModulePass());
+    pass_manager.add(createRemoveAddrSpacesPass());
+    pass_manager.add(createSortedPrintModulePass());
+    pass_manager.add(createCallVerifierPass());
+    pass_manager.run(*cgen_state_->module_);
+  }
+
   AUTOMATIC_IR_METADATA(cgen_state_.get());
 
   auto agg_fnames =
@@ -3061,19 +3060,6 @@ Executor::compileWorkUnit(const std::vector<InputTableInfo>& query_infos,
 #else
   LOG(IR) << serialize_llvm_object(cgen_state_->module_) << "\nEnd of IR";
 #endif
-
-  std::cerr << "Generated llvm ir" << std::endl;
-  std::cerr << serialize_llvm_object(cgen_state_->row_func_) << "\nEnd of IR\n\n\n"
-            << std::endl;
-  std::cerr << "Multifrag query func ir: " << std::endl;
-  std::cerr << serialize_llvm_object(multifrag_query_func)
-            << "\nEnd of Multifrag func\n\n"
-            << std::endl;
-
-  std::cerr << "Query template ir:" << std::endl;
-  std::cerr << serialize_llvm_object(query_func) << "\nEnd of query func\n\n"
-            << std::endl;
-
   // Run some basic validation checks on the LLVM IR before code is generated below.
   verify_function_ir(cgen_state_->row_func_);
   verify_function_ir(multifrag_query_func);

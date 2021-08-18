@@ -290,8 +290,9 @@ list(APPEND QUERY_ENGINE_LIBS ${llvm_libs} ${ZLIB_LIBRARIES})
 
 if(ENABLE_L0)
   list(APPEND QUERY_ENGINE_LIBS LLVMSPIRVLib)
-  list(APPEND QUERY_ENGINE_LIBS L0Mgr)
 endif()
+
+list(APPEND QUERY_ENGINE_LIBS L0Mgr)
 
 target_link_libraries(QueryEngine ${QUERY_ENGINE_LIBS})
 
